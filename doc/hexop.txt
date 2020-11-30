@@ -1,0 +1,39 @@
+ADD 	ADD{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+ADC 	ADC{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+SUB 	SUB{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+SBC 	SBC{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+RSB 	RSB{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+RSC 	RSC{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+AND 	AND{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+EOR 	EOR{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+BIC 	BIC{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+ORR 	ORR{S}{cond} dest, op1, op2 {, SHIFT_op #expression}
+
+MOV 	MOV{S}{cond} dest, op1 {, SHIFT_op #expression}
+MVN 	MVN{S}{cond} dest, op1 {, SHIFT_op #expression}
+
+CMP 	CMP{cond}     op1, op2 {, SHIFT_op #expression}
+CMN 	CMN{cond}     op1, op2 {, SHIFT_op #expression}
+TST 	TST{cond}     op1, op2 {, SHIFT_op #expression}
+TEQ 	TEQ{cond}     op1, op2 {, SHIFT_op #expression}
+
+
+LDR 	LDR{cond} dest, =expression
+LDR 	LDR{cond} dest, [source {, OFFSET}]
+		LDR{cond} dest, [source, OFFSET]!
+		LDR{cond} dest, [source], OFFSET 
+
+STR 	STR{cond} source, [dest {, OFFSET}] Offset addressing
+		STR{cond} source, [dest, OFFSET]! Pre-indexed addressing
+		STR{cond} source, [dest], OFFSET Post-indexed addressing
+
+B 	B{L}{cond} target
+
+DCD 	name DCD value_1, value_2, ... value_N
+EQU 	name equ expression
+FILL 	{name} FILL N
+END 	END{cond}
+
+
+LDM[dir] 	LDM[dir]{cond} source, {list of registers}
+STM[dir] 	STM[dir]{cond} dest, {list of registers}
