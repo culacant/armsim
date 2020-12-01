@@ -1,5 +1,5 @@
 CC = cc 
-CFLAGS = -std=c99 -Wall -ggdb -O0
+CFLAGS = -std=c99 -Wall -ggdb -O0 -lraylib -lX11
 LDFLAGS = 
 
 main: 

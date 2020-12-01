@@ -30,6 +30,13 @@ ldm
 stm
 b(l)
 swi
+adr
+```
+adr instruction is translated to the following:
+```
+ldr rX, [pc, 8]
+add pc, #4
+dcd IMM
 ```
 
 ## Supported literal mnemonics:
