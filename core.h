@@ -163,8 +163,12 @@ enum OPCODE
 	OP_DCD = 0xFFFF,
 	OP_FIL = 0xFFFFF,
 
+// pseudo
+	OP_ADR = 0xFFFFFF,
+
 // VAR
 	OP_END = 0xFFFFFFFF,
+
 };
 // ALU
 // in2 unused, needed for jump table

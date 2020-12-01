@@ -39,6 +39,9 @@ mnem_data mnem_op_tbl[] = {
 		{OP_DCD,  "dcd"},
 		{OP_FIL,  "fill"},
 		{OP_SWI,  "swi"},
+// pseudo
+		{OP_ADR,  "adr"},
+// VAR
 		{OP_END,  "END"},
 		{0,  	  "DONE"},
 	};
@@ -58,7 +61,7 @@ mnem_data mnem_cnd_tbl[] = {
 		{CND_GT,  "gt"},
 		{CND_LE,  "le"},
 		{CND_AL,  "al"},
-		{CND_AL,  "DONE"},
+		{0,  	  "DONE"},
 	};
 mnem_data mnem_shft_tbl[] = {
 		{SHFT_LSL,  "lsl"},
@@ -435,6 +438,63 @@ op_instr parse_swi(op_instr in, char *string)
 	INTERMEDIATE_CNT++;
 	return in;
 }
+op_instr parse_adr(op_instr in, char *string)
+{
+printf("ADR: %s\n", string);
+// adr rX, #IMM
+
+// ldr rX, [pc, 8]
+// add pc, #4
+// dcd IMM
+
+	char *pch = strtok(string," \t\n");
+	int i=0;
+	while(pch != NULL)
+	{
+		in = parse_reg(in, pch);
+		in = parse_imm(in, pch);
+		i++;
+		pch = strtok(NULL," \t\n");
+	}
+	op_instr out = {0};
+// ldr rX, [pc, #8]
+	out.opcode = OP_LDR;
+	out.cond = in.cond;
+	out.flag = in.flag;
+	out.argcnt = 5;
+	out.argtype[0] = ARG_REG;
+	strcpy(out.arg[0], in.arg[0]);
+	out.argtype[1] = ARG_ADRMODE;
+	strcpy(out.arg[1], "[");
+	out.argtype[2] = ARG_REG;
+	strcpy(out.arg[2], "15");
+	out.argtype[3] = ARG_IMM;
+	strcpy(out.arg[3], "4");
+	out.argtype[4] = ARG_ADRMODE;
+	strcpy(out.arg[4], "]");
+	INTERMEDIATE[INTERMEDIATE_CNT] = out;
+	INTERMEDIATE_CNT++;
+// add pc, #4
+	out.opcode = OP_ADD;
+	out.argcnt = 2;
+	out.argtype[0] = ARG_REG;
+	strcpy(out.arg[0], "15");
+	out.argtype[1] = ARG_IMM;
+	strcpy(out.arg[1], "4");
+	INTERMEDIATE[INTERMEDIATE_CNT] = out;
+	INTERMEDIATE_CNT++;
+// dcd IMM
+	out.opcode = OP_DCD;
+	out.cond = CND_AL;
+	out.flag = 0;
+	out.argcnt = 1;
+	out.argtype[0] = ARG_IMM;
+	strcpy(out.arg[0], in.arg[1]);
+	INTERMEDIATE[INTERMEDIATE_CNT] = out;
+	INTERMEDIATE_CNT++;
+
+	return in;
+}
 int parse_file(char *filename)
 {
 	FILE* f = fopen(filename, "r");
@@ -519,6 +579,9 @@ int parse_file(char *filename)
 						break;
 					case OP_SWI:
 						instr = parse_swi(instr, pch+strlen(pch)+1);
+						break;
+					case OP_ADR:
+						instr = parse_adr(instr, pch+strlen(pch)+1);
 						break;
 					case OP_END:
 						INTERMEDIATE[INTERMEDIATE_CNT] = instr;
