@@ -58,6 +58,7 @@ mnem_data mnem_cnd_tbl[] = {
 		{CND_GT,  "gt"},
 		{CND_LE,  "le"},
 		{CND_AL,  "al"},
+		{CND_AL,  "DONE"},
 	};
 mnem_data mnem_shft_tbl[] = {
 		{SHFT_LSL,  "lsl"},
@@ -428,8 +429,8 @@ op_instr parse_swi(op_instr in, char *string)
 		}
 		i++;
 	}
-	if(in.argcnt != 0)
-		printf("SWI not found!\n");
+	if(in.argcnt == 0)
+		printf("SWI not found!: %s\n", pch);
 	INTERMEDIATE[INTERMEDIATE_CNT] = in;
 	INTERMEDIATE_CNT++;
 	return in;

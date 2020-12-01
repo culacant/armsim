@@ -292,27 +292,24 @@ void exec_ldrstr(unsigned int opcode)
 	}
 
 	if((opcode&UMASK)>>USHIFT == 0)
-		in1 -= in2;
-	else
-		in1 += in2;
+		in2 = -in2;
 
 // TODO: b flag
 
-	if((opcode&PMASK)>>PSHIFT == 0)
-		r[rn] = in1;
+	if((opcode&PMASK)>>PSHIFT == 1)
+		in1+=in2;
 
 	if((opcode&BMASK)>>BSHIFT == 1)
-		printf("NIMP: B flag");
+		printf("NIMP: B flag\n");
 
 	if((opcode&LOADMASK)>>LOADSHIFT == 1)
 		memcpy(&r[rd], &MEM[in1], sizeof(unsigned int));
 	else
 		memcpy(&MEM[in1], &r[rd], sizeof(unsigned int));
 
-	if((opcode&WMASK)>>WSHIFT == 1)
-		r[rn] = in1;
-
-
+	if(((opcode&PMASK)>>PSHIFT == 0) ||
+	   (((opcode&PMASK)>>PSHIFT == 1) && ((opcode&WMASK)>>WSHIFT == 1)))
+		r[rn] += in2;
 }
 void exec_ldmstm(unsigned int opcode)
 {
@@ -353,7 +350,7 @@ void exec_ldmstm(unsigned int opcode)
 void exec_branch(unsigned int opcode)
 {
 	if((opcode&LINKMASK)>>LINKSHIFT == 1)
-		lr = pc+PIPELINE_OFS;
+		lr = pc;
 
 	int bta = (opcode&BTAMASK);
 	bta |= (bta&800000)?0xFF000000:0;
@@ -364,18 +361,13 @@ void exec_branch(unsigned int opcode)
 void exec_swi(unsigned int opcode)
 {
 	int swinr = opcode&SWIMASK;
-	switch(swinr)
+	if(swinr >= SWICNT)
 	{
-		case SWI_PRINTREG:
-			swi_printreg();
-			break;
-		case SWI_PRINTMEM:
-			swi_printmem();
-			break;
-		default:
-			printf("SWI %i NIMP\n", swinr);
-			break;
+		printf("SWI %i NIMP\n", swinr);
+		return;
 	}
+	else
+		swi_tbl[swinr]();
 }
 
 void exec(unsigned int opcode)
@@ -404,8 +396,7 @@ void exec(unsigned int opcode)
 			exec_swi(opcode);
 			break;
 		default:
-			printf("NOFUN! ");
+			printf("NOFUN!\n");
 			break;
 	}
-	printf("\n");
 }
