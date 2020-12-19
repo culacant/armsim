@@ -210,15 +210,7 @@ void exec_alu(unsigned int opcode)
 	int rn = (opcode&RNMASK)>>RNSHIFT;
 	int rd = (opcode&RDMASK)>>RDSHIFT;
 
-	in1 = r[rd];
-// tst, teq, cmp, cmn: input param is rn
-	if((opcode&OPMASK)>>OPSHIFT == OP_TST ||
-	   (opcode&OPMASK)>>OPSHIFT == OP_TEQ ||
-	   (opcode&OPMASK)>>OPSHIFT == OP_CMP ||
-	   (opcode&OPMASK)>>OPSHIFT == OP_CMN)
-	{
-		in1 = r[rn];
-	}
+	in1 = r[rn];
 	if((opcode&IMASK)>>ISHIFT == 1)
 	{
 		int imm = (opcode&IMMMASK)>>IMMSHIFT;

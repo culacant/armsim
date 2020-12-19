@@ -4,3 +4,6 @@ https://xlogicx.net/images/ARM_Machine_Guide_4.png
 http://www.eng.auburn.edu/~nelson/courses/elec5260_6260/slides/Chapter2%20ARM.pdf
 http://www.davespace.co.uk/arm/introduction-to-arm/barrel-shifter.html
 https://re-eject.gbadev.org/files/armref.pdf
+
+sprites:
+http://pousse.rapiere.free.fr/tome/

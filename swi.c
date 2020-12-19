@@ -6,6 +6,16 @@ void swi_printreg()
 	{
 		printf("r%i: %i\n", i, r[i]);
 	}
+	printf("cpsr: ");
+	if(cpsr&V)
+		printf("V");
+	if(cpsr&C)
+		printf("C");
+	if(cpsr&Z)
+		printf("Z");
+	if(cpsr&N)
+		printf("N");
+	printf("\n");
 }
 void swi_printmem()
 {
@@ -22,7 +32,7 @@ void swi_initraylib()
 	const int width = 640;
 	const int height = 480;
 	InitWindow(width, height, "armsim");
-	SetTargetFPS(10);
+	SetTargetFPS(30);
 	raylib_init_sprites();
 }
 
@@ -30,8 +40,21 @@ void swi_runraylib()
 {
 	BeginDrawing();
 		ClearBackground(RAYWHITE);
+// bg
 		int i = 0;
 		while(DRAWDATA_BG[i].spritenr != 0)
+		{
+			i++;
+		}
+		i = 0;
+		while(DRAWDATA_BG[i].spritenr != 0)
+		{
+			DrawTexture(SPRITES[DRAWDATA_BG[i].spritenr], DRAWDATA_BG[i].x, DRAWDATA_BG[i].y, WHITE);
+			i++;
+		}
+// fg
+		i = 0;
+		while(DRAWDATA_FG[i].spritenr != 0)
 		{
 			i++;
 		}
@@ -66,6 +89,15 @@ void swi_drawsprite_fg()
 	draw.x 			= r[1];
 	draw.y 			= r[2];
 	DRAWDATA_FG[r[3]] = draw;
+	printf("DRAWSPRITE\n");
+}
+void swi_drawsprite_bg()
+{
+	drawdata draw = {0};
+	draw.spritenr 	= r[0];
+	draw.x 			= r[1];
+	draw.y 			= r[2];
+	DRAWDATA_BG[r[3]] = draw;
 }
 mnem_data mnem_swi_tbl[] = {
 // INPUT: /
@@ -81,6 +113,7 @@ mnem_data mnem_swi_tbl[] = {
 // INPUT: r0: spritenr, r1: xpos, r2: ypos: r3: drawnr
 // OUTPUT: /
 		{5, "swi_drawsprite_fg"},
+		{6, "swi_drawsprite_bg"},
 		{0xFFFFFFFF, "DONE"},
 	};
 void (*swi_tbl[])(void) = {
@@ -90,7 +123,8 @@ void (*swi_tbl[])(void) = {
 		swi_runraylib,		// 3
 		swi_exitraylib,		// 4
 		swi_drawsprite_fg,	// 5
+		swi_drawsprite_bg,	// 6
 	};
-#define SWICNT 6
+#define SWICNT 7
 
 

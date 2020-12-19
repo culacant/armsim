@@ -30,7 +30,7 @@ int main()
     {
 		int opcode;
         memcpy(&opcode, &MEM[pc], sizeof(unsigned int));
-        printf("%.3i: %.8x\n", pc, opcode);
+//        printf("%.3i: %.8x\n", pc, opcode);
         if(opcode == OP_END)
 		{
 //			printf("\n");

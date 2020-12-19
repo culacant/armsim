@@ -21,4 +21,8 @@ void raylib_init_sprites()
 	memset(DRAWDATA_BG, 0, DRAWDATA_BG_CNT*sizeof(drawdata));
 	memset(SPRITES, 0, SPRITECNT*sizeof(Texture2D));
 	SPRITES[1] = LoadTexture("prog/sprite/player.png");
+	SPRITES[2] = LoadTexture("prog/sprite/stone.png");
+	SPRITES[3] = LoadTexture("prog/sprite/grass.png");
+	SPRITES[4] = LoadTexture("prog/sprite/dirt.png");
+	SPRITES[5] = LoadTexture("prog/sprite/door.png");
 }

@@ -5,8 +5,9 @@
 
 #define PIPELINE_OFS 4
 
-#define MEM_SIZE 1024
+#define MEM_SIZE 0xFFFFFF
 char MEM[MEM_SIZE*4];
+#define IO_PORT_1 0xFFFF00
 
 unsigned int r[16];
 unsigned int cpsr;

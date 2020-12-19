@@ -453,6 +453,7 @@ printf("ADR: %s\n", string);
 	{
 		in = parse_reg(in, pch);
 		in = parse_imm(in, pch);
+		in = parse_lbl(in, pch);
 		i++;
 		pch = strtok(NULL," \t\n");
 	}
@@ -476,11 +477,13 @@ printf("ADR: %s\n", string);
 	INTERMEDIATE_CNT++;
 // add pc, #4
 	out.opcode = OP_ADD;
-	out.argcnt = 2;
+	out.argcnt = 3;
 	out.argtype[0] = ARG_REG;
 	strcpy(out.arg[0], "15");
-	out.argtype[1] = ARG_IMM;
-	strcpy(out.arg[1], "4");
+	out.argtype[1] = ARG_REG;
+	strcpy(out.arg[1], "15");
+	out.argtype[2] = ARG_IMM;
+	strcpy(out.arg[2], "4");
 	INTERMEDIATE[INTERMEDIATE_CNT] = out;
 	INTERMEDIATE_CNT++;
 // dcd IMM
@@ -488,7 +491,7 @@ printf("ADR: %s\n", string);
 	out.cond = CND_AL;
 	out.flag = 0;
 	out.argcnt = 1;
-	out.argtype[0] = ARG_IMM;
+	out.argtype[0] = in.argtype[1];
 	strcpy(out.arg[0], in.arg[1]);
 	INTERMEDIATE[INTERMEDIATE_CNT] = out;
 	INTERMEDIATE_CNT++;
@@ -660,9 +663,7 @@ int lbl2adr(char *string)
 	for(int i=0;i<LABEL_CNT;i++)
 	{
 		if(strcmp(LABEL[i].name, string) == 0)
-		{
 			return LABEL[i].adr*4;
-		}
 	}
 	return -1;
 }
@@ -1116,8 +1117,13 @@ unsigned int parse_inter_b(op_instr in, unsigned int adr)
 unsigned int parse_inter_dcd(op_instr in)
 {
 	int out;
-	if(sscanf(in.arg[0], "%i", &out) != 1)
-		printf("ERR: %s\n", __func__);
+	if(in.argtype[0] == ARG_LIT || in.argtype[0] == ARG_IMM)
+	{
+		if(sscanf(in.arg[0], "%i", &out) != 1)
+			printf("ERR: %s, %s\n", __func__, in.arg[0]);
+	}
+	else if(in.argtype[0] == ARG_LBL)
+		out = lbl2adr(in.arg[0]);
 	return out;
 }
 unsigned int parse_inter_fill(op_instr in)
