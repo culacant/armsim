@@ -1,3 +1,4 @@
+tile_struct		dcb 0xFF, 6, 7, 8, 9, 0, 10, 11, 12, 13
 player_sprite	dcd 1
 player_pos 		dcd 0 ; x
 				dcd 0 ; y
@@ -10,6 +11,10 @@ tile_cols		dcd 5
 map_tiles		dcd 2, 3, 2, 3, 2
 				dcd 4, 5, 4, 5, 4
 				dcd 3, 2, 3, 2, 3
+
+; tile struct
+; sprite nr
+; walkable
 
 DRAW_MAP
 ;r0: tile #
@@ -130,7 +135,6 @@ DRAW_PLAYER
 	ldr r2, [r3], #4		; posx
 	mov r3, #0				; drawable
 	swi swi_drawsprite_fg
-	swi swi_printreg
 	mov pc, lr
 
 _start

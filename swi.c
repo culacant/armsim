@@ -89,7 +89,6 @@ void swi_drawsprite_fg()
 	draw.x 			= r[1];
 	draw.y 			= r[2];
 	DRAWDATA_FG[r[3]] = draw;
-	printf("DRAWSPRITE\n");
 }
 void swi_drawsprite_bg()
 {

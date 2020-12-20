@@ -291,13 +291,24 @@ void exec_ldrstr(unsigned int opcode)
 	if((opcode&PMASK)>>PSHIFT == 1)
 		in1+=in2;
 
-	if((opcode&BMASK)>>BSHIFT == 1)
-		printf("NIMP: B flag\n");
 
 	if((opcode&LOADMASK)>>LOADSHIFT == 1)
-		memcpy(&r[rd], &MEM[in1], sizeof(unsigned int));
+	{
+		if((opcode&BMASK)>>BSHIFT == 1)
+			r[rd] = MEM[in1];
+		else
+			memcpy(&r[rd], &MEM[in1], sizeof(unsigned int));
+	}
 	else
-		memcpy(&MEM[in1], &r[rd], sizeof(unsigned int));
+	{
+		if((opcode&BMASK)>>BSHIFT == 1)
+			MEM[in1] = (char)r[rd];
+			// bswap
+		else
+		{
+			memcpy(&MEM[in1], &r[rd], sizeof(unsigned int));
+		}
+	}
 
 	if(((opcode&PMASK)>>PSHIFT == 0) ||
 	   (((opcode&PMASK)>>PSHIFT == 1) && ((opcode&WMASK)>>WSHIFT == 1)))

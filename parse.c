@@ -28,6 +28,8 @@ mnem_data mnem_op_tbl[] = {
 		{OP_MUL, "mul"},
 		{OP_MLA, "mla"},
 // LDRSTR
+		{OP_LDRB, "ldrb"},
+		{OP_STRB, "strb"},
 		{OP_LDR, "ldr"},
 		{OP_STR, "str"},
 // LDMSTM
@@ -37,6 +39,7 @@ mnem_data mnem_op_tbl[] = {
 		{OP_B, 	 "b"},
 // data
 		{OP_DCD,  "dcd"},
+		{OP_DCB,  "dcb"},
 		{OP_FIL,  "fill"},
 		{OP_SWI,  "swi"},
 // pseudo
@@ -172,7 +175,6 @@ op_instr parseline_cnd(mnem_data mnem, char *string)
 	}
 	if(out.opcode == OP_B)
 	{
-		printf("CND: %s\n", cnd);
 		if(out.cond==CND_LS || out.cond==CND_LE || out.cond==CND_LT)
 		{
 			if(cnd[0] == 'l' && cnd[1] == 'l')
@@ -368,6 +370,53 @@ op_instr parse_dcd(op_instr in, char *string)
 	}
 	return in;
 }
+op_instr parse_dcb(op_instr in, char *string)
+{
+	char *pch = strtok(string," \t\n");
+	int cnt = 0;
+	int out = 0;
+	int word = 0;
+	in.opcode = OP_DCD;
+	in.cond = CND_AL;
+	in.flag = 0;
+	while(pch != NULL)
+	{
+		if(pch[strlen(pch)-1] == ',')
+			pch[strlen(pch)-1] = '\0';
+
+		if(sscanf(pch, "%i", &out) != 1)
+			printf("ERR: can't decode dcdb\n");
+		else
+		{
+			word |= (out<<8*(cnt)); // endianness
+			cnt++;
+			if(cnt == 4)
+			{
+				sprintf(in.arg[0], "%i", word);
+				in.argtype[0] = ARG_LIT;
+				in.argcnt = 1;
+
+				INTERMEDIATE[INTERMEDIATE_CNT] = in;
+				INTERMEDIATE_CNT++;
+
+				cnt = 0;
+				word = 0;
+			}
+		}
+		pch = strtok(NULL," \t\n");
+	}
+// might not be multiple of 4
+	if(cnt !=0)
+	{
+		sprintf(in.arg[0], "%i", word);
+		in.argtype[0] = ARG_LIT;
+		in.argcnt = 1;
+
+		INTERMEDIATE[INTERMEDIATE_CNT] = in;
+		INTERMEDIATE_CNT++;
+	}
+	return in;
+}
 op_instr parse_fill(op_instr in, char *string)
 {
 	char *pch = strtok(string," \t\n");
@@ -440,9 +489,6 @@ op_instr parse_swi(op_instr in, char *string)
 }
 op_instr parse_adr(op_instr in, char *string)
 {
-printf("ADR: %s\n", string);
-// adr rX, #IMM
-
 // ldr rX, [pc, 8]
 // add pc, #4
 // dcd IMM
@@ -553,6 +599,8 @@ int parse_file(char *filename)
 						break;
 					case OP_LDR:
 					case OP_STR:
+					case OP_STRB:
+					case OP_LDRB:
 						instr = parse_ldrstr(instr, pch+strlen(pch)+1);
 						INTERMEDIATE[INTERMEDIATE_CNT] = instr;
 						INTERMEDIATE_CNT++;
@@ -574,8 +622,10 @@ int parse_file(char *filename)
 					// DCW
 					// DCB
 					case OP_DCD:
-						// intermediates added in parse_mem
 						instr = parse_dcd(instr, pch+strlen(pch)+1);
+						break;
+					case OP_DCB:
+						instr = parse_dcb(instr, pch+strlen(pch)+1);
 						break;
 					case OP_FIL:
 						instr = parse_fill(instr, pch+strlen(pch)+1);
@@ -895,9 +945,9 @@ BLDOP_LDRSTR_I(int cond, int p, int u, int b, int w, int l, int rn, int rd, int 
 BLDOP_LDRSTR_RSR(int cond, int p, int u, int b, int w, int l, int rn, int rd, int rs, int shift, int rm)
 BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, int imm , int shift, int rm)
 */
-	int l = (in.opcode==OP_LDR)?1:0;
+	int l = (in.opcode==OP_LDR||in.opcode==OP_LDRB)?1:0;
+	int b = (in.opcode==OP_LDRB||in.opcode==OP_STRB)?1:0;
 	int rd;
-	int b = 0; // FIXME: byte adressing
 	if(sscanf(in.arg[0], "%i", &rd) != 1)
 		printf("ERR: %s\n", __func__);
 // ldr rX, =LBL		<< translates to rX, pc, #OFS
@@ -1182,6 +1232,8 @@ unsigned int parse_intermediate()
 			case OP_LDM:
 			case OP_LDR:
 			case OP_STR:
+			case OP_LDRB:
+			case OP_STRB:
 				out = parse_inter_ldrstr(INTERMEDIATE[i], i*4);
 				break;
 

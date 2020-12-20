@@ -2,6 +2,7 @@
 #define CORE_H
 
 #include <stdio.h>
+#include <byteswap.h>
 
 #define PIPELINE_OFS 4
 
@@ -150,6 +151,8 @@ enum OPCODE
 // LDRSTR
 	OP_LDR = 0x10,
 	OP_STR = 0x11,
+	OP_LDRB = 0x101,
+	OP_STRB = 0x111,
 
 // LDMSTRM
 	OP_LDM = 0x12,
@@ -161,7 +164,8 @@ enum OPCODE
 	OP_SWI = 0xFFF,
 
 // DATA
-	OP_DCD = 0xFFFF,
+	OP_DCD = 0xFFFF0,
+	OP_DCB = 0xFFFF1,
 	OP_FIL = 0xFFFFF,
 
 // pseudo
