@@ -26,8 +26,6 @@ mul
 mla
 ldr
 str
-ldm
-stm
 b(l)
 swi
 adr
@@ -42,7 +40,14 @@ dcd IMM
 ## Supported literal mnemonics:
 ```
 dcd
+dcb
 fill
+```
+
+## Untested instructions:
+```
+ldm
+stm
 ```
 
 Execution ends with mnemonic END, opcode 0xFFFFFFFF
