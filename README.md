@@ -2,7 +2,7 @@
 Simulates an armv4 machine.
 
 Assembly code is parsed, assembled and executed.
-C functions can be called by swi instruction.
+C functions can be called by adding them to the SWI table and calling the swi instruction.
 
 ## Supported instructions:
 ```
@@ -24,13 +24,17 @@ tst
 teq
 mul
 mla
-ldr
-str
+ldr(b)
+str(b)
+ldm
+stm
 b(l)
 swi
-adr
+adr			; pseudo-instruction, see below
+END			; custom instruction, halts the program (opcode 0xFFFFFFFF)
 ```
-adr instruction is translated to the following:
+
+The adr pseudo-instruction is translated to the following:
 ```
 ldr rX, [pc, 8]
 add pc, #4
@@ -39,18 +43,35 @@ dcd IMM
 
 ## Supported literal mnemonics:
 ```
-dcd
-dcb
-fill
+dcd			; 4 byte literal
+dcb			; 1 byte literal, line padded to 4 byte alignment
+fill		; x*4 byte literal
 ```
 
-## Untested instructions:
+## Unsupported instructions:
 ```
-ldm
-stm
-```
+; coprocessor instructions
+ldc
+mcr
+mrc
 
-Execution ends with mnemonic END, opcode 0xFFFFFFFF
+; PSR instructions
+mrs
+msr
+stc
+
+; swaps
+swp
+swpb
+
+; 64-bit multiplication
+smlal
+smull
+umlal
+umull
+```
 
 ## varia
-The genops directory contains a program to print a bunch of assembly code. Not all supported mnemonics are printed.
+- The genops directory contains a program to print a bunch of assembly code. Not all supported mnemonics are printed.
+- Half-word (16 bit) adressing is not supported at time of writing.
+- byte (8 bit) adressing is kinda janky due to x86 endianness. It should work though.

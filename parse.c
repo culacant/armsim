@@ -421,7 +421,6 @@ op_instr parse_fill(op_instr in, char *string)
 {
 	char *pch = strtok(string," \t\n");
 	int cnt = atoi(pch);
-	printf("COUNT: %i\n", cnt);
 	for(int i=0;i<cnt;i++)
 	{
 		strcpy(in.arg[0], pch);

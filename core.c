@@ -256,7 +256,7 @@ void exec_mul(unsigned int opcode)
 		out = r[rm]*r[rs]+r[rn];
 	else if((opcode&OPMASK)>>OPSHIFT == (OP_MUL&0xF))
 		out = r[rm]*r[rs];
-	r[rd] = out;
+	r[rn] = out;
 	exec_flags(opcode, out);
 }
 void exec_ldrstr(unsigned int opcode)

@@ -19,7 +19,11 @@ int main()
     {
 		int opcode;
         memcpy(&opcode, &MEM[i*4], sizeof(unsigned int));
-        printf("%.3i: %.8x\n", i*4, opcode);
+		if(i%4 == 0)
+			printf("%.3i: ", i*4);
+        printf("%.8x ", opcode);
+		if(i%4 == 3)
+			printf("\n");
         if(opcode == OP_END)
             break;
     }
