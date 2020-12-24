@@ -140,7 +140,7 @@ MOVE_PLAYER
 	adr r3, =tile_cols
 	ldr r3, [r3]		; cols
 	mov r4, r1
-	mla r4, r3, r2		; x+y*cols
+	mla r4, r4, r3, r2		; x+y*cols
 	adr r3, =map_tiles
 	add r3, r3, r4
 	ldrb r5, [r3]		; r5 = tile #
@@ -149,7 +149,6 @@ MOVE_PLAYER
 	add r3, r3, r5 lsl #2	; 4 bytes per tile
 	add r3, r3, #1
 	ldrb r0, [r3]			; r0 = walkable?
-
 
 	mov pc, lr
 
@@ -165,7 +164,7 @@ COLLIDE_TERRAIN
 
 ;r5: tile adr ofs
 	mov r5, r0			; x
-	mla r5, r5, r1		; x+y*cols
+	mla r5, r5, r5, r1		; x+y*cols
 ;r4: tile #
 	adr r4, =map_tiles
 	add r4, r4, r5
@@ -179,7 +178,6 @@ COLLIDE_TERRAIN
 	ldrb r4, [r4]
 
 	swi swi_printreg
-	adr 
 	mov pc, lr
 
 DRAW_PLAYER

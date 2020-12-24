@@ -12,8 +12,9 @@
 int main()
 {
     parse_file("prog/in.s");
-    print_intermediate();
+//    print_intermediate();
     pc = parse_intermediate();
+/*
 	printf("MEMORY:\n");
     for(int i=0;i<MEM_SIZE;i++)
     {
@@ -27,7 +28,7 @@ int main()
         if(opcode == OP_END)
             break;
     }
-//	return 0;
+*/
 	printf("\n");
 	printf("EXECUTING:\n");
     while(1)

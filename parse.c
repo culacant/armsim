@@ -1,86 +1,116 @@
 #include <string.h>
 #include <stdlib.h>
 
-op_instr INTERMEDIATE[1024];
-unsigned int INTERMEDIATE_CNT = 0;
-label LABEL[1024];
-unsigned int LABEL_CNT = 0;
-
-mnem_data mnem_op_tbl[] = {
-// ALU
-		{OP_MOV, "mov"},
-		{OP_MVN, "mvn"},
-		{OP_ADD, "add"},
-		{OP_ADC, "adc"},
-		{OP_SUB, "sub"},
-		{OP_SBC, "sbc"},
-		{OP_RSB, "rsb"},
-		{OP_RSC, "rsc"},
-		{OP_AND, "and"},
-		{OP_EOR, "eor"},
-		{OP_BIC, "bic"},
-		{OP_ORR, "orr"},
-		{OP_CMP, "cmp"},
-		{OP_CMN, "cmn"},
-		{OP_TST, "tst"},
-		{OP_TEQ, "teq"},
-// MUL
-		{OP_MUL, "mul"},
-		{OP_MLA, "mla"},
-// LDRSTR
-		{OP_LDRB, "ldrb"},
-		{OP_STRB, "strb"},
-		{OP_LDR, "ldr"},
-		{OP_STR, "str"},
-// LDMSTM
-		{OP_LDM, "ldm"},
-		{OP_STM, "stm"},
-// BRANCH
-		{OP_B, 	 "b"},
-// data
-		{OP_DCD,  "dcd"},
-		{OP_DCB,  "dcb"},
-		{OP_FIL,  "fill"},
-		{OP_SWI,  "swi"},
-// pseudo
-		{OP_ADR,  "adr"},
-// VAR
-		{OP_END,  "END"},
-		{0,  	  "DONE"},
-	};
-mnem_data mnem_cnd_tbl[] = {
-		{CND_EQ,  "eq"},
-		{CND_NE,  "ne"},
-		{CND_CS,  "cs"},
-		{CND_CC,  "cc"},
-		{CND_MI,  "mi"},
-		{CND_PL,  "pl"},
-		{CND_VS,  "vs"},
-		{CND_VC,  "vc"},
-		{CND_HI,  "hi"},
-		{CND_LS,  "ls"},
-		{CND_GE,  "ge"},
-		{CND_LT,  "lt"},
-		{CND_GT,  "gt"},
-		{CND_LE,  "le"},
-		{CND_AL,  "al"},
-		{0,  	  "DONE"},
-	};
-mnem_data mnem_shft_tbl[] = {
-		{SHFT_LSL,  "lsl"},
-		{SHFT_LSR,  "lsr"},
-		{SHFT_ASR,  "asr"},
-		{SHFT_ROR,  "ror"},
-		{0xFF,  	"DONE"},
-	};
-mnem_data mnem_ldmstm_tbl[] = {
-		{0,  "ia"},
-		{1,  "ib"},
-		{2,  "da"},
-		{3,  "db"},
-		{0,  "DONE"},
-	};
-
+int check_err(op_instr instr, char *str, unsigned int val, int type)
+{
+	int err = 0;
+	if(instr.line[strlen(instr.line)-1] == '\n')
+		instr.line[strlen(instr.line)-1] = '\0';
+	switch(type)
+	{
+		    case ERR_ARG_CND:
+				if(val>=0xF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid conditional: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_OPCODE:
+				if(val>0xF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid opcode: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_PUBWL:
+				if(val!=1 && val!=0)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid PUBWL value: %i\n", val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_S:
+				if(val!=1 && val!=0)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid flags value: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_REG:
+				if(val>0xF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid register: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_ROT:
+				if(val>0xF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid rotation: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_IMM8:
+				if(val>0xFF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Immediate more than 8 bits: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_IMM12:
+				if(val>0xFF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Immediate more than 12 bits: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_SHIFT:
+				if(val>0x1FF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid shift: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_REGMAP:
+				if(val>0xFFFF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid register map: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_SWI:
+				if(val>0xFFFFFF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid SWI #: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_BTA:
+				if(val>0xFFFFFF)
+				{
+					printf("Line %i: %s\n", instr.linenr, instr.line);
+					printf("Invalid branch offset: %s, %i\n", str, val);
+					err = 1;
+				}
+				break;
+			case ERR_ARG_ARGS:
+				printf("Line %i: %s\n", instr.linenr, instr.line);
+				printf("Invalid arguments\n");
+				break;
+	}
+	return err;
+}
 void print_intermediate()
 {
 	printf("LABELS:\n");
@@ -121,6 +151,7 @@ void print_intermediate()
 			}
 			printf(" %s", INTERMEDIATE[i].arg[j]);
 		}
+		printf("\nLINE: %i: %s", INTERMEDIATE[i].linenr, INTERMEDIATE[i].line);
 		printf("\n");
 
 	}
@@ -139,9 +170,8 @@ mnem_data parseline_op(char *string)
 	}
 	return (mnem_data){0x0, "ERR"};
 }
-op_instr parseline_cnd(mnem_data mnem, char *string)
+op_instr parseline_cnd(mnem_data mnem, op_instr out, char *string)
 {
-	op_instr out = {0};
 	out.opcode = mnem.opcode;
 	out.cond = CND_AL;
 	out.flag = 0;
@@ -480,8 +510,6 @@ op_instr parse_swi(op_instr in, char *string)
 		}
 		i++;
 	}
-	if(in.argcnt == 0)
-		printf("SWI not found!: %s\n", pch);
 	INTERMEDIATE[INTERMEDIATE_CNT] = in;
 	INTERMEDIATE_CNT++;
 	return in;
@@ -502,7 +530,7 @@ op_instr parse_adr(op_instr in, char *string)
 		i++;
 		pch = strtok(NULL," \t\n");
 	}
-	op_instr out = {0};
+	op_instr out = in;
 // ldr rX, [pc, #8]
 	out.opcode = OP_LDR;
 	out.cond = in.cond;
@@ -547,10 +575,12 @@ int parse_file(char *filename)
 {
 	FILE* f = fopen(filename, "r");
 	char line[128];
+	int linenr = 0;
 	while(fgets(line, 128, f) != NULL)
 	{
-		char lineo[128];
-		strcpy(lineo, line);
+		linenr++;
+		char lineo[256];
+		sprintf(lineo,"%s", line);
 		char *comment = strchr (line, ';');
 		if(comment)
 		{
@@ -562,12 +592,15 @@ int parse_file(char *filename)
 		char *pch = strtok(line," \t\n");
 		while(pch != NULL)
 		{
+			op_instr instr = {0};
+			strcpy(instr.line, lineo);
+			instr.linenr = linenr;
 			if(pch[0] == ';')
 				break;
 			mnem_data opmnem = parseline_op(pch);
 			if(strcmp(opmnem.str, "ERR") !=0)
 			{
-				op_instr instr = parseline_cnd(opmnem, pch);
+				instr = parseline_cnd(opmnem, instr, pch);
 				switch(instr.opcode)
 				{
 					case OP_MOV:
@@ -721,71 +754,82 @@ unsigned int parse_inter_mov(op_instr in)
 // mov rX, #IMM
 	if(in.argtype[0] == ARG_REG && in.argtype[1] == ARG_IMM && in.argcnt == 2)
 	{
-		int rd;
-		int imm;
-		if(sscanf(in.arg[0], "%i", &rd) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[1], "%i", &imm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rd = -1;
+		int imm = -1;
+		sscanf(in.arg[0], "%i", &rd);
+		sscanf(in.arg[1], "%i", &imm);
+
+		check_err(in, in.arg[0], rd, ERR_ARG_REG);
+		check_err(in, in.arg[1], imm, ERR_ARG_IMM8);
+
 		return BLDOP_ALU_I(in.cond, in.opcode, in.flag, 0, rd, 0, imm);
 	}
 // mov rX, =lbl
 	else if(in.argtype[0] == ARG_REG && in.argtype[1] == ARG_LBL && in.argcnt == 2)
 	{
-		int rd;
-		int imm;
-		if(sscanf(in.arg[0], "%i", &rd) != 1)
-			printf("ERR: %s\n", __func__);
+		int rd = -1;
+		int imm = -1;
+		sscanf(in.arg[0], "%i", &rd);
 		imm = lbl2adr(in.arg[1]);
+
+		check_err(in, in.arg[0], rd, ERR_ARG_REG);
+		check_err(in, in.arg[1], imm, ERR_ARG_IMM8);
+
 		return BLDOP_ALU_I(in.cond, in.opcode, in.flag, 0, rd, 0, imm);
 	}
 // mov rX, rX
 	else if(in.argtype[0] == ARG_REG && in.argtype[1] == ARG_REG && in.argcnt == 2)
 	{	
-		int rd;
-		int rm;
-		if(sscanf(in.arg[0], "%i", &rd) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[1], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rd = -1;
+		int rm = -1;
+		sscanf(in.arg[0], "%i", &rd);
+		sscanf(in.arg[1], "%i", &rm);
+
+		check_err(in, in.arg[0], rd, ERR_ARG_REG);
+		check_err(in, in.arg[1], rm, ERR_ARG_REG);
+
 		return BLDOP_ALU_RSI(in.cond, in.opcode, in.flag, 0, rd, 0, 0, rm);
 	}
 // mov rX, rX, LSL #IMM
 	else if(in.argtype[0] == ARG_REG && in.argtype[1] == ARG_REG && in.argtype[2] == ARG_SHIFT && in.argtype[3] == ARG_IMM && in.argcnt == 4)
 	{
-		int rd;
-		int imm;
-		int shift;
-		int rm;
-		if(sscanf(in.arg[0], "%i", &rd) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[1], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rd = -1;
+		int imm = -1;
+		int shift = -1;
+		int rm = -1;
+		sscanf(in.arg[0], "%i", &rd);
+		sscanf(in.arg[1], "%i", &rm);
 		shift = str2shift(in.arg[2]);
-		if(shift<0)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[3], "%i", &imm) != 1)
-			printf("ERR: %s\n", __func__);
+		sscanf(in.arg[3], "%i", &imm);
+
+		check_err(in, in.arg[0], rd, ERR_ARG_REG);
+		check_err(in, in.arg[1], rm, ERR_ARG_REG);
+		check_err(in, in.arg[2], shift, ERR_ARG_SHIFT);
+		check_err(in, in.arg[3], imm, ERR_ARG_IMM8);
+
 		return BLDOP_ALU_RSI(in.cond, in.opcode, in.flag, 0, rd, imm, shift, rm);
 	}
 // mov rX, rX, LSL rX
 	else if(in.argtype[0] == ARG_REG && in.argtype[1] == ARG_REG && in.argtype[2] == ARG_SHIFT && in.argtype[3] == ARG_REG && in.argcnt == 4)
 	{
-		int rd;
-		int rs;
-		int shift;
-		int rm;
-		if(sscanf(in.arg[0], "%i", &rd) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[1], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rd = -1;
+		int rs = -1;
+		int shift = -1;
+		int rm = -1;
+		sscanf(in.arg[0], "%i", &rd);
+		sscanf(in.arg[1], "%i", &rm);
 		shift = str2shift(in.arg[2]);
-		if(shift<0)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[3], "%i", &rs) != 1)
-			printf("ERR: %s\n", __func__);
+		sscanf(in.arg[3], "%i", &rs);
+
+		check_err(in, in.arg[0], rd, ERR_ARG_REG);
+		check_err(in, in.arg[1], rm, ERR_ARG_REG);
+		check_err(in, in.arg[2], shift, ERR_ARG_SHIFT);
+		check_err(in, in.arg[3], rs, ERR_ARG_REG);
+
 		return BLDOP_ALU_RSR(in.cond, in.opcode, in.flag, 0, rd, rs, shift, rm);
 	}
+	else
+		check_err(in, "NOPE", 0, ERR_ARG_ARGS);
 
 	return 0;
 }
@@ -794,80 +838,93 @@ unsigned int parse_inter_cmp(op_instr in)
 // cmp rX, #IMM
 	if(in.argtype[0] == ARG_REG && in.argtype[1] == ARG_IMM && in.argcnt == 2)
 	{
-		int rn;
-		int imm;
-		if(sscanf(in.arg[0], "%i", &rn) != 1)
-			printf("ERR1 0: %s\n", __func__);
-		if(sscanf(in.arg[1], "%i", &imm) != 1)
-			printf("ERR1 1: %s\n", __func__);
+		int rn = -1;
+		int imm = -1;
+		sscanf(in.arg[0], "%i", &rn);
+		sscanf(in.arg[1], "%i", &imm);
+
+		check_err(in, in.arg[0], rn, ERR_ARG_REG);
+		check_err(in, in.arg[1], imm, ERR_ARG_IMM8);
+
 		return BLDOP_ALU_I(in.cond, in.opcode, 1, rn, 0, 0, imm);
 	}
 // cmp rX, rX
 	else if(in.argtype[0] == ARG_REG && in.argtype[1] == ARG_REG && in.argcnt == 2)
 	{	
-		int rn;
-		int rm;
-		if(sscanf(in.arg[0], "%i", &rn) != 1)
-			printf("ERR2 0: %s\n", __func__);
-		if(sscanf(in.arg[1], "%i", &rm) != 1)
-			printf("ERR2 1: %s\n", __func__);
+		int rn = -1;
+		int rm = -1;
+		sscanf(in.arg[0], "%i", &rn);
+		sscanf(in.arg[1], "%i", &rm);
+
+		check_err(in, in.arg[0], rn, ERR_ARG_REG);
+		check_err(in, in.arg[1], rm, ERR_ARG_REG);
+
 		return BLDOP_ALU_RSI(in.cond, in.opcode, 1, rn, 0, 0, 0, rm);
 	}
 // cmp rX, rX, LSL #IMM
 	else if(in.argtype[0] == ARG_REG && in.argtype[1] == ARG_REG && in.argtype[2] == ARG_SHIFT && in.argtype[3] == ARG_IMM && in.argcnt == 4)
 	{
-		int rn;
-		int imm;
-		int shift;
-		int rm;
-		if(sscanf(in.arg[0], "%i", &rn) != 1)
-			printf("ERR3 0: %s\n", __func__);
-		if(sscanf(in.arg[1], "%i", &rm) != 1)
-			printf("ERR3 1: %s\n", __func__);
+		int rn = -1;
+		int imm = -1;
+		int shift = -1;
+		int rm = -1;
+		sscanf(in.arg[0], "%i", &rn);
+		sscanf(in.arg[1], "%i", &rm);
 		shift = str2shift(in.arg[2]);
-		if(shift<0)
-			printf("ERR3 2: %s \"%s\"\n", __func__, in.arg[2]);
-		if(sscanf(in.arg[3], "%i", &imm) != 1)
-			printf("ERR3 3: %s\n", __func__);
+		sscanf(in.arg[3], "%i", &imm);
+
+
+		check_err(in, in.arg[0], rn, ERR_ARG_REG);
+		check_err(in, in.arg[1], rm, ERR_ARG_REG);
+		check_err(in, in.arg[2], shift, ERR_ARG_SHIFT);
+		check_err(in, in.arg[3], imm, ERR_ARG_IMM8);
+
 		return BLDOP_ALU_RSI(in.cond, in.opcode, 1, rn, 0, imm, shift, rm);
 	}
 // cmp rX, rX, LSL rX
 	else if(in.argtype[0] == ARG_REG && in.argtype[1] == ARG_REG && in.argtype[2] == ARG_SHIFT && in.argtype[3] == ARG_REG && in.argcnt == 4)
 	{
-		int rn;
-		int rs;
-		int shift;
-		int rm;
-		if(sscanf(in.arg[0], "%i", &rn) != 1)
-			printf("ERR4 0: %s\n", __func__);
-		if(sscanf(in.arg[1], "%i", &rm) != 1)
-			printf("ERR4 1: %s\n", __func__);
+		int rn = -1;
+		int rs = -1;
+		int shift = -1;
+		int rm = -1;
+		sscanf(in.arg[0], "%i", &rn);
+		sscanf(in.arg[1], "%i", &rm);
 		shift = str2shift(in.arg[2]);
-		if(shift<0)
-			printf("ERR4 2: %s \"%s\"\n", __func__, in.arg[2]);
-		if(sscanf(in.arg[3], "%i", &rs) != 1)
-			printf("ERR4 3: %s\n", __func__);
+		sscanf(in.arg[3], "%i", &rs);
+
+		check_err(in, in.arg[0], rn, ERR_ARG_REG);
+		check_err(in, in.arg[1], rm, ERR_ARG_REG);
+		check_err(in, in.arg[2], shift, ERR_ARG_SHIFT);
+		check_err(in, in.arg[3], rs, ERR_ARG_REG);
+
 		return BLDOP_ALU_RSR(in.cond, in.opcode, 1, rn, 0, rs, shift, rm);
 	}
+	else
+		check_err(in, "NOPE", 0, ERR_ARG_ARGS);
+
 	return 0;
 }
 unsigned int parse_inter_mul(op_instr in)
 {
-	int rd;
-	int rs;
-	int rm;
+	int rd = -1;
+	int rs = -1;
+	int rm = -1;
 	int rn = 0;
 
-	if(sscanf(in.arg[0], "%i", &rd) != 1)
-		printf("ERR: %s\n", __func__);
-	if(sscanf(in.arg[1], "%i", &rm) != 1)
-		printf("ERR: %s\n", __func__);
-	if(sscanf(in.arg[2], "%i", &rs) != 1)
-		printf("ERR: %s\n", __func__);
+	sscanf(in.arg[0], "%i", &rd);
+	sscanf(in.arg[1], "%i", &rm);
+	sscanf(in.arg[2], "%i", &rs);
+
+	check_err(in, in.arg[0], rn, ERR_ARG_REG);
+	check_err(in, in.arg[1], rm, ERR_ARG_REG);
+	check_err(in, in.arg[2], rs, ERR_ARG_REG);
+
 	if(in.opcode == OP_MLA)
 	{
-		if(sscanf(in.arg[3], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
+		rn = -1;
+		sscanf(in.arg[3], "%i", &rn);
+		check_err(in, in.arg[3], rn, ERR_ARG_REG);
 	}
 	in.opcode = in.opcode&0xF;
 	return BLDOP_MUL(in.cond, in.opcode, in.flag, rn, rd, rs, rm);
@@ -875,80 +932,90 @@ unsigned int parse_inter_mul(op_instr in)
 unsigned int parse_inter_alu(op_instr in)
 {
 // add rX, rX, #IMM
-	int rd;
-	if(sscanf(in.arg[0], "%i", &rd) != 1)
-		printf("ERR: %s\n", __func__);
+	int rd = -1;
+	sscanf(in.arg[0], "%i", &rd);
+
+	check_err(in, in.arg[0], rd, ERR_ARG_REG);
+
 	if(in.argtype[1] == ARG_REG && in.argtype[2] == ARG_IMM && in.argcnt == 3)
 	{
-		int rn;
-		int imm;
-		if(sscanf(in.arg[1], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[2], "%i", &imm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int imm = -1;
+		sscanf(in.arg[1], "%i", &rn);
+		sscanf(in.arg[2], "%i", &imm);
+
+		check_err(in, in.arg[1], rn, ERR_ARG_REG);
+		check_err(in, in.arg[2], imm, ERR_ARG_IMM8);
+
 		return BLDOP_ALU_I(in.cond, in.opcode, in.flag, rn, rd, 0, imm);
 	}
 // add rX, rX, rX
 	else if(in.argtype[1] == ARG_REG && in.argtype[2] == ARG_REG && in.argcnt == 3)
 	{	
-		int rn;
-		int rm;
-		if(sscanf(in.arg[1], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[2], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int rm = -1;
+		sscanf(in.arg[1], "%i", &rn);
+		sscanf(in.arg[2], "%i", &rm);
+
+		check_err(in, in.arg[1], rn, ERR_ARG_REG);
+		check_err(in, in.arg[2], rm, ERR_ARG_REG);
+
 		return BLDOP_ALU_RSI(in.cond, in.opcode, in.flag, rn, rd, 0, 0, rm);
 	}
 // add rX, rX, rX LSL #IMM
 	else if(in.argtype[1] == ARG_REG && in.argtype[2] == ARG_REG && in.argtype[3] == ARG_SHIFT && in.argtype[4]==ARG_IMM && in.argcnt == 5)
 	{
-		int rn;
-		int rm;
-		int shift;
-		int imm;
-		if(sscanf(in.arg[1], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[2], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int rm = -1;
+		int shift = -1;
+		int imm = -1;
+		sscanf(in.arg[1], "%i", &rn);
+		sscanf(in.arg[2], "%i", &rm);
 		shift = str2shift(in.arg[3]);
-		if(shift<0)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[4], "%i", &imm) != 1)
-			printf("ERR: %s\n", __func__);
+		sscanf(in.arg[4], "%i", &imm);
+
+
+		check_err(in, in.arg[1], rn, ERR_ARG_REG);
+		check_err(in, in.arg[2], rm, ERR_ARG_REG);
+		check_err(in, in.arg[3], shift, ERR_ARG_SHIFT);
+		check_err(in, in.arg[4], imm, ERR_ARG_IMM8);
+
 		return BLDOP_ALU_RSI(in.cond, in.opcode, in.flag, rn, rd, imm, shift, rm);
 	}
 // add rX, rX, rX LSL rX
 	else if(in.argtype[1] == ARG_REG && in.argtype[2] == ARG_REG && in.argtype[3] == ARG_SHIFT && in.argtype[4]==ARG_REG&& in.argcnt == 5)
 	{
-		int rn;
-		int rm;
-		int shift;
-		int rs;
-		if(sscanf(in.arg[1], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[2], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int rm = -1;
+		int shift = -1;
+		int rs = -1;
+		sscanf(in.arg[1], "%i", &rn);
+		sscanf(in.arg[2], "%i", &rm);
 		shift = str2shift(in.arg[3]);
-		if(shift<0)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[4], "%i", &rs) != 1)
-			printf("ERR: %s\n", __func__);
+		sscanf(in.arg[4], "%i", &rs);
+
+
+		check_err(in, in.arg[1], rn, ERR_ARG_REG);
+		check_err(in, in.arg[2], rm, ERR_ARG_REG);
+		check_err(in, in.arg[3], shift, ERR_ARG_SHIFT);
+		check_err(in, in.arg[4], rs, ERR_ARG_REG);
+
 		return BLDOP_ALU_RSR(in.cond, in.opcode, in.flag, rn, rd, rs, shift, rm);
 	}
+	else
+		check_err(in, "NOPE", 0, ERR_ARG_ARGS);
+
 	return 0;
 }
 unsigned int parse_inter_ldrstr(op_instr in, unsigned int adr)
 {
-/*
-BLDOP_LDRSTR_I(int cond, int p, int u, int b, int w, int l, int rn, int rd, int imm)
-BLDOP_LDRSTR_RSR(int cond, int p, int u, int b, int w, int l, int rn, int rd, int rs, int shift, int rm)
-BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, int imm , int shift, int rm)
-*/
 	int l = (in.opcode==OP_LDR||in.opcode==OP_LDRB)?1:0;
 	int b = (in.opcode==OP_LDRB||in.opcode==OP_STRB)?1:0;
-	int rd;
-	if(sscanf(in.arg[0], "%i", &rd) != 1)
-		printf("ERR: %s\n", __func__);
+	int rd = -1;
+	sscanf(in.arg[0], "%i", &rd);
+
+	check_err(in, in.arg[0], rd, ERR_ARG_REG);
+
 // ldr rX, =LBL		<< translates to rX, pc, #OFS
 	if(in.argtype[1] == ARG_LBL && in.argcnt == 2)
 	{
@@ -957,9 +1024,6 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 		int w = 0;
 		int rn = 15;	// PC
 		int imm = lbl2adr(in.arg[1]);
-// FIXME: fix ldrstr imm
-//		imm = (imm-adr-PIPELINE_OFS);
-		printf("LDRSTR IMM: %i\n", imm);
 		if(imm<0)
 		{
 			u = 0;
@@ -967,21 +1031,34 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 		}
 		if(in.argcnt == 6)
 			w = 1;
+
+		check_err(in, "NOPE", p, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", u, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", b, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", w, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", l, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", rn, ERR_ARG_REG);
+		check_err(in, in.arg[1], imm, ERR_ARG_IMM12);
+
 		return BLDOP_LDRSTR_I(in.cond, p, u, b, w, l, rn, rd, imm);
 	}
-
-
 // ldr rX, [ rX] {!}
 	else if(in.argtype[1] == ARG_ADRMODE && in.argtype[2] == ARG_REG && in.argtype[3] == ARG_ADRMODE && ((in.argcnt == 4) || (in.argcnt == 5 && in.argtype[4] == ARG_ADRMODE)))
 	{
 		int p = 1;
 		int u = 1;
 		int w = 0;
-		int rn;
-		if(sscanf(in.arg[2], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		sscanf(in.arg[2], "%i", &rn);
 		if(in.argcnt == 5)
 			w = 1;
+		check_err(in, "NOPE", p, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", u, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", b, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", w, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", l, ERR_ARG_PUBWL);
+		check_err(in, in.arg[2], rn, ERR_ARG_REG);
+
 		return BLDOP_LDRSTR_I(in.cond, p, u, b, w, l, rn, rd, 0);
 	}
 
@@ -991,12 +1068,10 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 		int p = 1;
 		int u = 1;
 		int w = 0;
-		int rn;
-		int imm;
-		if(sscanf(in.arg[2], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[3], "%i", &imm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int imm = -1;
+		sscanf(in.arg[2], "%i", &rn);
+		sscanf(in.arg[3], "%i", &imm);
 		if(imm<0)
 		{
 			u = 0;
@@ -1004,6 +1079,15 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 		}
 		if(in.argcnt == 6)
 			w = 1;
+
+		check_err(in, "NOPE", p, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", u, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", b, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", w, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", l, ERR_ARG_PUBWL);
+		check_err(in, in.arg[2], rn, ERR_ARG_REG);
+		check_err(in, in.arg[3], imm, ERR_ARG_IMM12);
+
 		return BLDOP_LDRSTR_I(in.cond, p, u, b, w, l, rn, rd, imm);
 	}
 // ldr rX, [ rX, rX] {!}
@@ -1012,14 +1096,21 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 		int p = 1;
 		int u = 1;
 		int w = 0;
-		int rn;
-		int rm;
-		if(sscanf(in.arg[2], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[3], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int rm = -1;
+		sscanf(in.arg[2], "%i", &rn);
+		sscanf(in.arg[3], "%i", &rm);
 		if(in.argcnt == 6)
 			w = 1;
+
+		check_err(in, "NOPE", p, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", u, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", b, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", w, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", l, ERR_ARG_PUBWL);
+		check_err(in, in.arg[2], rn, ERR_ARG_REG);
+		check_err(in, in.arg[3], rm, ERR_ARG_REG);
+
 		return BLDOP_LDRSTR_RSI(in.cond, p, u, b, w, l, rn, rd, 0, 0, rm);
 	}
 // ldr rX, [ rX, rX lsl #IMM] {!}
@@ -1028,19 +1119,14 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 		int p = 1;
 		int u = 1;
 		int w = 0;
-		int rn;
-		int rm;
-		int shift;
-		int imm;
-		if(sscanf(in.arg[2], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[3], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int rm = -1;
+		int shift = -1;
+		int imm = -1;
+		sscanf(in.arg[2], "%i", &rn);
+		sscanf(in.arg[3], "%i", &rm);
 		shift = str2shift(in.arg[4]);
-		if(shift<0)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[5], "%i", &imm) != 1)
-			printf("ERR: %s\n", __func__);
+		sscanf(in.arg[5], "%i", &imm);
 		if(in.argcnt == 8)
 			w = 1;
 		if(imm<0)
@@ -1048,6 +1134,17 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 			u = 0;
 			imm = -imm;
 		}
+
+		check_err(in, "NOPE", p, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", u, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", b, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", w, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", l, ERR_ARG_PUBWL);
+		check_err(in, in.arg[2], rn, ERR_ARG_REG);
+		check_err(in, in.arg[3], rm, ERR_ARG_REG);
+		check_err(in, in.arg[4], shift, ERR_ARG_SHIFT);
+		check_err(in, in.arg[5], imm, ERR_ARG_IMM12);
+
 		return BLDOP_LDRSTR_RSI(in.cond, p, u, b, w, l, rn, rd, imm, shift, rm);
 	}
 // ldr rX, [ rX], #IMM
@@ -1056,17 +1153,24 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 		int p = 0;
 		int u = 1;
 		int w = 0;
-		int rn;
-		int imm;
-		if(sscanf(in.arg[2], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[4], "%i", &imm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int imm = -1;
+		sscanf(in.arg[2], "%i", &rn);
+		sscanf(in.arg[4], "%i", &imm);
 		if(imm<0)
 		{
 			u = 0;
 			imm = -imm;
 		}
+
+		check_err(in, "NOPE", p, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", u, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", b, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", w, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", l, ERR_ARG_PUBWL);
+		check_err(in, in.arg[2], rn, ERR_ARG_REG);
+		check_err(in, in.arg[4], imm, ERR_ARG_IMM12);
+
 		return BLDOP_LDRSTR_I(in.cond, p, u, b, w, l, rn, rd, imm);
 	}
 // ldr rX, [ rX], rX
@@ -1075,12 +1179,19 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 		int p = 0;
 		int u = 1;
 		int w = 0;
-		int rn;
-		int rm;
-		if(sscanf(in.arg[2], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[4], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int rm = -1;
+		sscanf(in.arg[2], "%i", &rn);
+		sscanf(in.arg[4], "%i", &rm);
+
+		check_err(in, "NOPE", p, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", u, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", b, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", w, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", l, ERR_ARG_PUBWL);
+		check_err(in, in.arg[2], rn, ERR_ARG_REG);
+		check_err(in, in.arg[4], rm, ERR_ARG_REG);
+
 		return BLDOP_LDRSTR_RSI(in.cond, p, u, b, w, l, rn, rd, 0, 0, rm);
 	}
 // ldr rX, [ rX], rX
@@ -1089,26 +1200,35 @@ BLDOP_LDRSTR_RSI(int cond, int p, int u, int b, int w, int l, int rn, int rd, in
 		int p = 0;
 		int u = 1;
 		int w = 0;
-		int rn;
-		int rm;
-		int shift;
-		int imm;
-		if(sscanf(in.arg[2], "%i", &rn) != 1)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[4], "%i", &rm) != 1)
-			printf("ERR: %s\n", __func__);
+		int rn = -1;
+		int rm = -1;
+		int shift = -1;
+		int imm = -1;
+		sscanf(in.arg[2], "%i", &rn);
+		sscanf(in.arg[4], "%i", &rm);
 		shift = str2shift(in.arg[5]);
-		if(shift<0)
-			printf("ERR: %s\n", __func__);
-		if(sscanf(in.arg[6], "%i", &imm) != 1)
-			printf("ERR: %s\n", __func__);
+		sscanf(in.arg[6], "%i", &imm);
 		if(imm<0)
 		{
 			u = 0;
 			imm = -imm;
 		}
+
+		check_err(in, "NOPE", p, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", u, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", b, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", w, ERR_ARG_PUBWL);
+		check_err(in, "NOPE", l, ERR_ARG_PUBWL);
+		check_err(in, in.arg[2], rn, ERR_ARG_REG);
+		check_err(in, in.arg[4], rm, ERR_ARG_REG);
+		check_err(in, in.arg[5], shift, ERR_ARG_SHIFT);
+		check_err(in, in.arg[6], imm, ERR_ARG_IMM12);
+
 		return BLDOP_LDRSTR_RSI(in.cond, p, u, b, w, l, rn, rd, imm, shift, rm);
 	}
+	else
+		check_err(in, "NOPE", 0, ERR_ARG_ARGS);
+
 	return 0;
 }
 unsigned int parse_inter_ldmstm(op_instr in)
@@ -1118,7 +1238,7 @@ unsigned int parse_inter_ldmstm(op_instr in)
 	int b = 0;
 	int w = 0;
 	int l = (in.opcode==OP_LDM)?1:0;
-	int rn = 0;
+	int rn = -1;
 	int regmap = 0;
 	switch(in.flag)
 	{
@@ -1140,8 +1260,10 @@ unsigned int parse_inter_ldmstm(op_instr in)
 			break;
 	}
 
-	if(sscanf(in.arg[0], "%i", &rn) != 1)
-		printf("ERR: %s\n", __func__);
+	sscanf(in.arg[0], "%i", &rn);
+
+	check_err(in, in.arg[0], rn, ERR_ARG_REG);
+
 	int regstart = 1;
 	if(in.argtype[1] == ARG_ADRMODE)
 	{
@@ -1151,9 +1273,10 @@ unsigned int parse_inter_ldmstm(op_instr in)
 	for(int i=regstart;i<in.argcnt;i++)
 	{
 		int reg;
-		if(sscanf(in.arg[i], "%i", &reg) != 1)
-			printf("ERR: %s\n", __func__);
+		sscanf(in.arg[i], "%i", &reg);
 		regmap |= (1<<reg);
+
+		check_err(in, in.arg[i], reg, ERR_ARG_REG);
 	}
 	return BLDOP_LDMSTM(in.cond, p, u, b, w, l, rn, regmap);
 }
@@ -1161,6 +1284,9 @@ unsigned int parse_inter_b(op_instr in, unsigned int adr)
 {
 	int bta = lbl2adr(in.arg[0]);
 	bta = ((bta-adr-PIPELINE_OFS)>>2)&0xFFFFFF;
+
+	check_err(in, in.arg[0], bta, ERR_ARG_BTA);
+
 	return BLDOP_B(in.cond, in.flag, bta);
 }
 unsigned int parse_inter_dcd(op_instr in)
@@ -1169,10 +1295,14 @@ unsigned int parse_inter_dcd(op_instr in)
 	if(in.argtype[0] == ARG_LIT || in.argtype[0] == ARG_IMM)
 	{
 		if(sscanf(in.arg[0], "%i", &out) != 1)
-			printf("ERR: %s, %s\n", __func__, in.arg[0]);
+			check_err(in, "NOPE", 0, ERR_ARG_ARGS);
 	}
 	else if(in.argtype[0] == ARG_LBL)
+	{
 		out = lbl2adr(in.arg[0]);
+	}
+	else
+		check_err(in, "NOPE", 0, ERR_ARG_ARGS);
 	return out;
 }
 unsigned int parse_inter_fill(op_instr in)
@@ -1183,11 +1313,16 @@ unsigned int parse_inter_swi(op_instr in)
 {
 	if(in.argtype[0] == ARG_IMM && in.argcnt == 1)
 	{
-		int imm;
-		if(sscanf(in.arg[0], "%i", &imm) != 1)
-			printf("ERR: %s\n", __func__);
+		int imm = -1;
+		sscanf(in.arg[0], "%i", &imm);
+
+		check_err(in, in.arg[0], imm, ERR_ARG_SWI);
+
 		return BLDOP_SWI(in.cond, imm);
 	}
+	else
+		check_err(in, "NOPE", 0, ERR_ARG_ARGS);
+
 	return 0;
 }
 
