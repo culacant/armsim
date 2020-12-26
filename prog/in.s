@@ -1,10 +1,13 @@
-stack			fill 4
-
 player_sprite	dcd 1
 player_pos 		dcd 0 ; x
 				dcd 0 ; y
 player_ofs		dcd 400 ; x
 				dcd 225 ; y
+
+mob1_sprite		dcd 6
+mob1_pos		dcd 5
+				dcd 3
+mob1_stats		dcb 5, 0, 1, 0	; hp, armor, atk, ???
 
 tile_size		dcd 64
 tile_rows		dcd 3
@@ -109,7 +112,7 @@ MOVE_PLAYER
 
 	tst r0, #3			; mask: 0011
 	tstne r0, #12		; mask: 1100
-	movne r6, #4		; diagonal speed = 2/3ths normal
+	movne r6, #4		; diagonal speed = 4/5ths normal
 
 	tst r0, #1			; KEY_UP
 	subne r5, r5, r6
@@ -126,58 +129,48 @@ MOVE_PLAYER
 	ldr r2, [r3], #4		; posy
 
 	add r1, r1, r4
+	stmib sp!, {r1-r5, lr}
+	bl COLLIDE_TERRAIN
+	ldmda sp!, {r1-r5, lr}
+	cmp r0, #0
+	subeq r1, r1, r4
+
 	add r2, r2, r5
+	stmib sp!, {r1-r5, lr}
+	bl COLLIDE_TERRAIN
+	ldmda sp!, {r1-r5, lr}
+	cmp r0, #0
+	subeq r2, r2, r5
+
+	swi swi_printreg
 
 	adr r3, =player_pos
 	str r1, [r3], #4		; posx
 	str r2, [r3], #4		; posy
 
-	add r1, r1, #32			; ofs: 32px
-	mov r1, r1 lsr #6		; mask out 64
-	add r2, r2, #64 		; ofs: 64px
-	mov r2, r2 lsr #6
-
-	adr r3, =tile_cols
-	ldr r3, [r3]		; cols
-	mov r4, r1
-	mla r4, r4, r3, r2		; x+y*cols
-	adr r3, =map_tiles
-	add r3, r3, r4
-	ldrb r5, [r3]		; r5 = tile #
-
-	adr r3. =tile_struct
-	add r3, r3, r5 lsl #2	; 4 bytes per tile
-	add r3, r3, #1
-	ldrb r0, [r3]			; r0 = walkable?
-
 	mov pc, lr
 
 COLLIDE_TERRAIN
-;r0: original posx/out posx
-;r1: original posy/out posy
-;r2: deltax
-;r3: deltay
+; r1: posx
+; r2: posy
+	add r4, r1, #32			; ofs: 32px
+	mov r4, r4 lsr #6		; mask out 64 for tile index
+	add r5, r2, #64 		; ofs: 64px
+	mov r5, r5 lsr #6
 
-;r4: # collumns
-	adr r4, =tile_cols
-	ldr r4, [r4]
+	adr r3, =tile_cols
+	ldr r3, [r3]			; cols
+	mla r0, r5, r3, r4		; y*cols + x; ofs in r0
 
-;r5: tile adr ofs
-	mov r5, r0			; x
-	mla r5, r5, r5, r1		; x+y*cols
-;r4: tile #
-	adr r4, =map_tiles
-	add r4, r4, r5
-	ldrb r4, [r4]
+	
+	adr r3, =map_tiles
+	add r3, r3, r0
+	ldrb r4, [r3]			; tile #
 
-;r4: walkable
-;r5: tile ofs
-	adr r5, =tile_struct
-	add r5, r5, r4 lsl #2
-	add r5, r5, #1
-	ldrb r4, [r4]
+	adr r3, =tile_struct		
+	add r3, r3, r4, lsl #2	; 2nd byte = walkable
+	ldrb r0, [r3, #1]		; walkable in r0
 
-	swi swi_printreg
 	mov pc, lr
 
 DRAW_PLAYER
@@ -194,11 +187,20 @@ DRAW_PLAYER
 	mov pc, lr
 
 _start
+	adr sp, =stack
 	swi swi_initraylib
 RUNRAYLIB
 	bl MOVE_PLAYER
 	bl DRAW_PLAYER
 	bl DRAW_MAP
 	swi swi_runraylib
+	tst r0, #16			; KEY_Q
+	bne DONE
 	b RUNRAYLIB
-END
+
+DONE
+	END
+
+
+stack			fill 10
+

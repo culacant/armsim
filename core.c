@@ -252,8 +252,9 @@ void exec_mul(unsigned int opcode)
 	int rs = (opcode&RSMASK)>>RSSHIFT;
 	int rm = (opcode&RMMASK)>>RMSHIFT;
 	int out;
+
 	if((opcode&OPMASK)>>OPSHIFT == (OP_MLA&0xF))
-		out = r[rm]*r[rs]+r[rn];
+		out = r[rm]*r[rs]+r[rd];
 	else if((opcode&OPMASK)>>OPSHIFT == (OP_MUL&0xF))
 		out = r[rm]*r[rs];
 	r[rn] = out;
@@ -319,35 +320,37 @@ void exec_ldmstm(unsigned int opcode)
 	int rn = (opcode&RNMASK)>>RNSHIFT;
 // PU WL
 	int adr = r[rn];
-	int inc = (opcode&UMASK)>>USHIFT;
-	int after = (opcode&PMASK)>>PSHIFT?0:1;
+	int p = (opcode&PMASK)>>PSHIFT?0:1;
+	int u = (opcode&UMASK)>>USHIFT;
+	int w = (opcode&WMASK)>>WSHIFT;
+	int l = (opcode&LOADMASK)>>LOADSHIFT;
 
-	int istart = inc?0:16;
-	for(int i=istart;inc?i<16:i>0;inc?i++:i--)
+	int istart = u?0:15;
+	for(int i=istart;u?i<15:i>0;u?i++:i--)
 	{
 		if(opcode&(1<<i))
 		{
-			if(!after)
+			if(!p)
 			{
-				if(inc)
+				if(u)
 					adr+=4;
 				else
 					adr-=4;
 			}
-			if((opcode&LOADMASK)>>LOADSHIFT == 1)
+			if(l)
 				memcpy(&r[i], &MEM[adr], sizeof(unsigned int));
 			else
 				memcpy(&MEM[adr], &r[i], sizeof(unsigned int));
-			if(after)
+			if(p)
 			{
-				if(inc)
+				if(u)
 					adr+=4;
 				else
 					adr-=4;
 			}
 		}
 	}
-	if((opcode&WMASK)>>WSHIFT == 1)
+	if(w)
 		r[rn] = adr;
 }
 void exec_branch(unsigned int opcode)

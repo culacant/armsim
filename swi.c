@@ -77,6 +77,8 @@ void swi_runraylib()
 		r[0] |= 1<<2;
 	if(IsKeyDown(KEY_D))
 		r[0] |= 1<<3;
+	if(IsKeyDown(KEY_Q))
+		r[0] |= 1<<4;
 }
 void swi_exitraylib()
 {

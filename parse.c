@@ -1364,6 +1364,9 @@ unsigned int parse_intermediate()
 				break;
 
 			case OP_LDM:
+			case OP_STM:
+				out = parse_inter_ldmstm(INTERMEDIATE[i]);
+				break;
 			case OP_LDR:
 			case OP_STR:
 			case OP_LDRB:
