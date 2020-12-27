@@ -21,7 +21,7 @@ typedef struct mnem_data
 
 typedef struct op_instr
 {
-	char line[128];
+	char line[1024];
 	int linenr;
 	int opcode;
 	int cond;
@@ -37,7 +37,8 @@ enum DATA_TYPE
 	TYPE_INSTR	= 1,
 };
 
-op_instr INTERMEDIATE[1024];
+#define INTERMEDIATE_SIZE 5000
+op_instr INTERMEDIATE[INTERMEDIATE_SIZE];
 unsigned int INTERMEDIATE_CNT = 0;
 label LABEL[1024];
 unsigned int LABEL_CNT = 0;

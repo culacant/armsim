@@ -25,7 +25,7 @@ unsigned long exec_mov(unsigned int in1, unsigned int in2)
 }
 unsigned long exec_mvn(unsigned int in1, unsigned int in2)
 {
-	return (unsigned long)~in1;
+	return (unsigned long)-in2;
 }
 
 unsigned long exec_add(unsigned int in1, unsigned int in2)

@@ -12,7 +12,10 @@
 int main()
 {
     parse_file("prog/in.s");
+	/*
     print_intermediate();
+	return 0;
+	*/
     pc = parse_intermediate();
 	printf("MEMORY:\n");
     for(int i=0;i<MEM_SIZE;i++)
@@ -33,12 +36,9 @@ int main()
     {
 		int opcode;
         memcpy(&opcode, &MEM[pc], sizeof(unsigned int));
-//        printf("%.3i: %.8x\n", pc, opcode);
+//		printf("OP: %.8x\n", opcode);
         if(opcode == OP_END)
-		{
-//			printf("\n");
             break;
-		}
 		exec(opcode);
     }
     return 0;

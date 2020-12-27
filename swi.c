@@ -30,7 +30,7 @@ void swi_printmem()
 void swi_initraylib()
 {
 	const int width = 640;
-	const int height = 480;
+	const int height = 640;
 	InitWindow(width, height, "armsim");
 	SetTargetFPS(30);
 	raylib_init_sprites();

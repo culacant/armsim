@@ -574,12 +574,12 @@ op_instr parse_adr(op_instr in, char *string)
 int parse_file(char *filename)
 {
 	FILE* f = fopen(filename, "r");
-	char line[128];
+	char line[1024];
 	int linenr = 0;
-	while(fgets(line, 128, f) != NULL)
+	while(fgets(line, 1024, f) != NULL)
 	{
 		linenr++;
-		char lineo[256];
+		char lineo[1024];
 		sprintf(lineo,"%s", line);
 		char *comment = strchr (line, ';');
 		if(comment)

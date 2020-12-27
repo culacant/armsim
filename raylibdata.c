@@ -10,9 +10,9 @@ typedef struct drawdata
 #define SPRITECNT 64
 Texture2D SPRITES[SPRITECNT];
 
-#define DRAWDATA_FG_CNT 32
+#define DRAWDATA_FG_CNT 256
 drawdata DRAWDATA_FG[DRAWDATA_FG_CNT];
-#define DRAWDATA_BG_CNT 32
+#define DRAWDATA_BG_CNT 256
 drawdata DRAWDATA_BG[DRAWDATA_BG_CNT];
 
 void raylib_init_sprites()

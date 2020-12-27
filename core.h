@@ -176,7 +176,7 @@ enum OPCODE
 
 };
 // ALU
-// in2 unused, needed for jump table
+// in1 unused for mov, needed for jump table
 unsigned long exec_mov(unsigned int in1, unsigned int in2);
 unsigned long exec_mvn(unsigned int in1, unsigned int in2);
 
