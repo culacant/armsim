@@ -12,8 +12,10 @@ Texture2D SPRITES[SPRITECNT];
 
 #define DRAWDATA_FG_CNT 256
 drawdata DRAWDATA_FG[DRAWDATA_FG_CNT];
+int DRAWDATA_FG_I = 0;
 #define DRAWDATA_BG_CNT 256
 drawdata DRAWDATA_BG[DRAWDATA_BG_CNT];
+int DRAWDATA_BG_I = 0;
 
 void raylib_init_sprites()
 {
@@ -25,4 +27,6 @@ void raylib_init_sprites()
 	SPRITES[3] = LoadTexture("prog/sprite/stone.png");
 	SPRITES[4] = LoadTexture("prog/sprite/dirt.png");
 	SPRITES[5] = LoadTexture("prog/sprite/door.png");
+	SPRITES[6] = LoadTexture("prog/sprite/kobolt.png");
+	SPRITES[7] = LoadTexture("prog/sprite/playersprites.png");
 }

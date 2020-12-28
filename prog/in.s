@@ -1,17 +1,40 @@
-player_sprite	dcd 1
+player_sprite	dcb 7, 0, 0, 0		; spritenr, ofsx, ofsy, flags
+player_animdata	dcb 1, 2, 3, 4		; flags, state, facing, frame
+;flags:
+;1: playing
+;states:
+;0: cast
+;1: stab
+;2: walk
+;3: slash
+;4: death (single facing, will break)
 player_pos 		dcd 128 ; x
-				dcd 128 ; y
+				dcd 129 ; y
 
 player_ofs		dcd 288 ; x
 				dcd 288 ; y
 
-mob1_sprite		dcd 6
-mob1_pos		dcd 5
-				dcd 3
-mob1_stats		dcb 5, 0, 1, 0	; hp, armor, atk, ???
+mob_cnt			dcd 3
+mob_arr
+				dcb 6, 0, 0, 0	; sprite
+				dcd 150			; posx
+				dcd 150			; posy
+				dcb 5, 0, 1, 0	; hp, armor, atk, ???
+
+				dcb 6, 0, 0, 0
+				dcd 200
+				dcd 150
+				dcb 5, 0, 1, 0
+
+				dcb 6, 0, 0, 0
+				dcd 100
+				dcd 250
+				dcb 5, 0, 1, 0
+
+
 
 tile_size		dcd 64
-tile_rows		dcd 64
+tile_rows		dcd 63
 tile_cols		dcd 64 ; word-aligned
 map_tiles		
 			dcb 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -88,6 +111,19 @@ tile_dirt		dcb 4, 1
 tile_grass		dcb 2, 1
 
 DRAW_MAP
+;r0: sprite index
+;r1: sprite x
+;r2: sprite y
+;r3: unused
+;r4: current tile x
+;r5: initial tile x
+;r6: final tile x
+;r7: initial/current tile y
+;r8: final tile y
+;r9: pixel offset x
+;r10: pixel offset y
+;r11: sprite size
+;r12: addresses/map #rows/map #cols
 	adr r12, =player_pos
 	ldr r9, [r12], #4		; posx
 	ldr r10, [r12], #4		; posy
@@ -122,10 +158,9 @@ DRAW_MAP
 	movge r6, r12
 
 	mov r11, #64			; sprite size
-	mov r3, #0				; bg index
 
 draw_map_row
-	mla r2, r7, r12, r4		; tile adress ofs
+	mla r2, r7, r12, r4		; tile address ofs
 
 	adr r1, =map_tiles
 	add r1, r1, r2
@@ -141,7 +176,6 @@ draw_map_row
 	sub r2, r2, r10			; subtract ofs
 	
 	swi swi_drawsprite_bg
-	add r3, r3, #1			; increment bg index
 	add r4, r4, #1			; Cx
 	cmp r4, r6
 	bne draw_map_row
@@ -153,75 +187,174 @@ draw_map_row
 
 	mov pc, lr
 
-MOVE_PLAYER
-; r0: inputs
-; r1: posx
-; r2: posy
-; r3: pos adr
-; r4: movement x
-; r5: movement y
-; r6: movement speed
+PLAYER_TICK
+;animation and facing logic
+;r0: input
+;r6: anim/frame
+;	2: walk
+;	3: slash
+;r7: facing
+;r8: address
+	adr r8, =player_animdata
+	ldrb r6, [r8, #3]		; frame
+
+	subs r6, r6, #1
+	movmi r6, #7
+	strb r6, [r8, #3]
+
+	ldrb r7, [r8, #1]		; state
+	cmp r7, #3				; state = attacking?
+	bne state_set			; no, branch to state machine
+	cmp r6, #0				; if animation still running, continue attack
+	bne state_attack
+
+state_set
+	tst r0, #32			; 10000 > attack key
+	movne r6, #7		; always start attack from frame 7
+	strbne r6, [r8, #3]
+	bne state_attack
+	tst r0, #15			; 01111 > movement keys
+	bne state_movement
+	b state_idle
+
+state_idle
+	mov r6, #0
+	strb r6, [r8, #1]		; state
+	b state_done
+;;;;;;;;;;;;;;;;;;;;; MOVEMENT ;;;;;;;;;;;;;;;;;;;;; 
+state_movement
+	mov r6, #2
+	strb r6, [r8, #1]		; state
+;set facing
+	tst r0, #1		; KEY_UP
+	movne r7, #0
+	tst r0, #2		; KEY_DOWN
+	movne r7, #2
+	tst r0, #4		; KEY_LEFT
+	movne r7, #1
+	tst r0, #8		; KEY_RIGHT
+	movne r7, #3
+;store facing
+	strb r7, [r8, #2]		; facing
+
+;movement logic
+;r0: input
+;r1: posx
+;r2: posy
+;r3: movement x
+;r4: movement y
+;r5: movement speed
+;r8: address
+	mov r3, #0
 	mov r4, #0
-	mov r5, #0
-	mov r6, #5			; movement speed
+	mov r5, #5				;default movement speed
 
-	tst r0, #3			; mask: 0011
-	tstne r0, #12		; mask: 1100
-	movne r6, #4		; diagonal speed = 4/5ths normal
+	tst r0, #3				;mask UPDOWN
+	tstne r0, #12			;mask LEFTRIGHT
+	movne r5, #4			;diagonal movement speed
 
-	tst r0, #1			; KEY_UP
-	subne r5, r5, r6
-	tst r0, #2			; KEY_DWN
-	addne r5, r5, r6
+	adr r8, =player_pos
+	ldr r1, [r8, #0]		; posx
+	ldr r2, [r8, #4]		; posy
 
-	tst r0, #8			; KEY_RIGHT
-	addne r4, r4, r6
-	tst r0, #4			; KEY_LEFT
-	subne r4, r4, r6
+	tst r0, #1				; KEY_UP
+	mvnne r4, r5
+	tst r0, #2				; KEY_DOWN
+	movne r4, r5
+	tst r0, #4				; KEY_LEFT
+	mvnne r3, r5
+	tst r0, #8				; KEY_RIGHT
+	movne r3, r5
 
-	adr r3, =player_pos
-	ldr r1, [r3], #4		; posx
-	ldr r2, [r3], #4		; posy
-
-	add r1, r1, r4
-	stmib sp!, {r1-r5, lr}
+	add r1, r1, r3
+	stmib sp!, {lr}			; store LR
 	bl COLLIDE_TERRAIN
-	ldmda sp!, {r1-r5, lr}
-	cmp r0, #0
-	subeq r1, r1, r4
+	ldmda sp!, {lr}
+	;walkable in r9
+	cmp r9, #0
+	subeq r1, r1, r3
 
-	add r2, r2, r5
-	stmib sp!, {r1-r5, lr}
+	add r2, r2, r4
+	stmib sp!, {lr}			; store LR
 	bl COLLIDE_TERRAIN
-	ldmda sp!, {r1-r5, lr}
-	cmp r0, #0
-	subeq r2, r2, r5
+	ldmda sp!, {lr}
+	;walkable in r9
+	cmp r9, #0
+	subeq r2, r2, r4
 
-	adr r3, =player_pos
-	str r1, [r3], #4		; posx
-	str r2, [r3], #4		; posy
+	adr r8, =player_pos
+	str r1, [r8, #0]		; posx
+	str r2, [r8, #4]		; posy
 
+	b state_done
+;;;;;;;;;;;;;;;;;;;;; ATTACK ;;;;;;;;;;;;;;;;;;;;; 
+state_attack
+;r0: sprite #
+;r1: sprite x, attack minx
+;r2: sprite y, attack miny
+;r3: facing
+;r6: frame/state
+;r12: address
+
+	cmp r6, #4				; r6 holds frame value
+	mov r6, #3
+	strb r6, [r8, #1]		; state
+	bne state_done			; r6 frame != 4, no attack handling this frame
+
+	adr r12, =player_ofs
+	mov r0, #3
+	ldr r1, [r12], #4		; posx
+	ldr r2, [r12], #4		; posy
+
+	adr r3, =player_animdata
+	ldrb r3, [r3, #2]		; facing
+
+; default attack
+; size: 64x64
+; dmg: 1
+	cmp r3, #0				; UP
+	addeq r1, r1, #0		; attack ofs x
+	subeq r2, r2, #10		; attack ofs y
+	cmp r3, #2				; DOWN
+	addeq r1, r1, #0
+	addeq r2, r2, #54
+	cmp r3, #1				; LEFT
+	subeq r1, r1, #42
+	addeq r2, r2, #10
+	cmp r3, #3				; RIGHT
+	addeq r1, r1, #44
+	addeq r2, r2, #10
+swi swi_printreg
+
+	swi swi_drawsprite_fg
+
+	b state_done
+state_done
 	mov pc, lr
 
 COLLIDE_TERRAIN
-; r1: posx
-; r2: posy
-	add r4, r1, #32			; ofs: 32px
-	mov r4, r4 lsr #6		; mask out 64 for tile index
-	add r5, r2, #64 		; ofs: 64px
-	mov r5, r5 lsr #6
+;r9: total tile index/walkable
+;r1: posx
+;r2: posy
+;r10: tile index x
+;r11: tile index y
+;r12: addresses/#cols/tile ofs
+	add r10, r1, #32			; ofs: 32px
+	mov r10, r10 lsr #6			; mask out 64 for tile index
+	add r11, r2, #64 			; ofs: 64px
+	mov r11, r11 lsr #6
 
-	adr r3, =tile_cols
-	ldr r3, [r3]			; cols
-	mla r0, r5, r3, r4		; y*cols + x; ofs in r0
+	adr r12, =tile_cols
+	ldr r12, [r12]				; cols
+	mla r9, r11, r12, r10		; y*cols + x; ofs in r9
 	
-	adr r3, =map_tiles
-	add r3, r3, r0
-	ldrb r4, [r3]			; tile #
+	adr r12, =map_tiles
+	add r12, r12, r9
+	ldrb r10, [r12]				; tile #
 
-	adr r3, =tile_struct		
-	add r3, r3, r4, lsl #2	; 2nd byte = walkable
-	ldrb r0, [r3, #1]		; walkable in r0
+	adr r12, =tile_struct		
+	add r12, r12, r10, lsl #2	; 2nd byte = walkable
+	ldrb r9, [r12, #1]			; walkable in r0
 
 	mov pc, lr
 
@@ -229,20 +362,81 @@ DRAW_PLAYER
 ;r0: sprite nr
 ;r1: posx
 ;r2: posy
-;r3: adress/drawable
-	mov r0, #1				; spritenr
+;r3: address
+
+;r4: flags
+;r5: anim
+;r6: facing
+;r7: cur frame
+	adr r3, =player_sprite
+	ldr r0, [r3]
+
+	adr r3, =player_animdata
+	ldrb r4, [r3, #0]		; flags
+	ldrb r5, [r3, #1]		; state
+	ldrb r6, [r3, #2]		; facing
+	ldrb r7, [r3, #3]		; frame
+
+	add r5, r6, r5 lsl #2	; state*4 + facing
+	orr r0, r0, r5 lsl #16	; Y-frame in 2nd byte
+	orr r0, r0, r7 lsl #8
+
 	adr r3, =player_ofs
 	ldr r1, [r3], #4		; posx
-	ldr r2, [r3], #4		; posx
-	mov r3, #0				; drawable
+	ldr r2, [r3], #4		; posy
 	swi swi_drawsprite_fg
 	mov pc, lr
+
+DRAW_MOBS
+;r0: sprite nr
+;r1: posx
+;r2: posy
+;r3: mob iterator/ address
+;r4: rfu, probs frame
+;r5: mob cnt
+;r6: ofsx
+;r7: ofsy
+;r8: address
+	adr r3, =player_ofs
+	ldr r4, [r3], #4		; ofsx
+	ldr r5, [r3], #4		; ofsy
+
+	adr r3, =player_pos
+	ldr r6, [r3], #4		; posx
+	ldr r7, [r3], #4		; posy
+
+	sub r6, r4, r6
+	sub r7, r5, r7
+
+	mov r3, #0				; mob_it
+	adr r5, =mob_cnt
+	ldr r5, [r5]			; mob_cnt
+
+	adr r8, =mob_arr
+
+draw_mob_loop
+	ldr r0, [r8], #4		; sprite
+	ldr r1, [r8], #4		; posx
+	ldr r2, [r8], #4		; posy
+	add r8, r8, #4			; flags
+
+	add r1, r1, r6			; apply ofs
+	add r2, r2, r7
+
+	add r3, r3, #1
+	swi swi_drawsprite_fg
+
+	cmp r3, r5
+	blt draw_mob_loop
+	mov pc, lr
+
 
 _start
 	adr sp, =stack
 	swi swi_initraylib
 RUNRAYLIB
-	bl MOVE_PLAYER
+	bl PLAYER_TICK
+	bl DRAW_MOBS
 	bl DRAW_PLAYER
 	bl DRAW_MAP
 	swi swi_runraylib
