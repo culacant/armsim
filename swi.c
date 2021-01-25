@@ -24,7 +24,9 @@ void swi_printmem()
 	printf("\nSWI PRINTMEM\n");
 	for(unsigned int i=0;i<cnt;i++)
 	{
-		printf("%x: %.8x\n", adr+i, MEM[adr+i]);
+		int opcode;
+		memcpy(&opcode, &adr+4*i, sizeof(unsigned int));
+		printf("%x: %.8x\n", adr+4*i, opcode);
 	}
 }
 void swi_initraylib()
@@ -84,8 +86,10 @@ void swi_exitraylib()
 }
 void swi_drawsprite_fg()
 {
+/*
 char *rb = (char*)&r[0];
-//printf("SPRITE #: %i OFS X: %i Y: %i R: %i\n", rb[0], rb[1], rb[2], rb[3]);
+printf("SPRITE #: %i OFS X: %i Y: %i R: %i\n", rb[0], rb[1], rb[2], rb[3]);
+*/
 	drawdata draw = {0};
 	draw.spritenr 	= r[0];
 	draw.x 			= r[1];

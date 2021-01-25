@@ -12,18 +12,23 @@
 int main()
 {
     parse_file("prog/in.s");
-	/*
+/*
     print_intermediate();
 	return 0;
-	*/
+*/
     pc = parse_intermediate();
+	if(PARSE_ERR)
+	{
+		printf("COMPILATION ERRORS\n");
+		return 0;
+	}
 	printf("MEMORY:\n");
     for(int i=0;i<MEM_SIZE;i++)
     {
 		int opcode;
         memcpy(&opcode, &MEM[i*4], sizeof(unsigned int));
 		if(i%4 == 0)
-			printf("%.3i: ", i*4);
+			printf("%.4x: ", i*4);
         printf("%.8x ", opcode);
 		if(i%4 == 3)
 			printf("\n");

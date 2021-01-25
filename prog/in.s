@@ -1,9 +1,9 @@
 player_sprite	dcb 7, 0, 0, 0		; spritenr, ofsx, ofsy, flags
-player_animdata	dcb 1, 2, 3, 4		; flags, state, facing, frame
+player_animdata	dcb 1, 0, 3, 4		; flags, state, facing, frame
 ;flags:
 ;1: playing
 ;states:
-;0: cast
+;0: cast/idle
 ;1: stab
 ;2: walk
 ;3: slash
@@ -14,22 +14,60 @@ player_pos 		dcd 128 ; x
 player_ofs		dcd 288 ; x
 				dcd 288 ; y
 
+hurtbox_cnt		dcd 10
+hurtbox_arr
+; attacker:
+; 255 = inactive
+; 254 = player
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
+				dcd 0,0,0,0		; posx, posy, width, height
+				dcb 0,0,0,0		; attacker, type, dmg
+
 mob_cnt			dcd 3
 mob_arr
 				dcb 6, 0, 0, 0	; sprite
 				dcd 150			; posx
 				dcd 150			; posy
-				dcb 5, 0, 1, 0	; hp, armor, atk, ???
+				dcb 1, 0, 1, 0	; hp, armor, atk, ???
+				dcb 1, 0, 0, 7	; flags, state, facing, frame
 
 				dcb 6, 0, 0, 0
 				dcd 200
 				dcd 150
-				dcb 5, 0, 1, 0
+				dcb 1, 0, 1, 0	; hp, armor, atk, ???
+				dcb 1, 0, 1, 7	; flags, state, facing, frame
 
 				dcb 6, 0, 0, 0
 				dcd 100
 				dcd 250
-				dcb 5, 0, 1, 0
+				dcb 1, 0, 1, 0	; hp, armor, atk, ???
+				dcb 1, 0, 2, 7	; flags, state, facing, frame
 
 
 
@@ -190,41 +228,60 @@ draw_map_row
 PLAYER_TICK
 ;animation and facing logic
 ;r0: input
-;r6: anim/frame
+;r6: anim
 ;	2: walk
 ;	3: slash
-;r7: facing
+;r7: frame
 ;r8: address
+;r9: jump address
 	adr r8, =player_animdata
-	ldrb r6, [r8, #3]		; frame
 
-	subs r6, r6, #1
-	movmi r6, #7
-	strb r6, [r8, #3]
+	ldrb r7, [r8, #3]		; frame
+	subs r7, r7, #1
+	movmi r7, #7			; loop anim back
+	strb r7, [r8, #3]
+;0: cast/idle
+;1: stab
+;2: walk
+;3: slash
+;4: death (single facing, will break)
 
-	ldrb r7, [r8, #1]		; state
-	cmp r7, #3				; state = attacking?
-	bne state_set			; no, branch to state machine
-	cmp r6, #0				; if animation still running, continue attack
-	bne state_attack
 
-state_set
-	tst r0, #32			; 10000 > attack key
-	movne r6, #7		; always start attack from frame 7
-	strbne r6, [r8, #3]
-	bne state_attack
-	tst r0, #15			; 01111 > movement keys
-	bne state_movement
-	b state_idle
+	ldrb r6, [r8, #1]		; state
+	cmp r6, #0
+	beq state_idle
+; no stab yet
+	cmp r6, #2
+	beq state_movement
+	cmp r6, #3
+	beq state_attack
 
 state_idle
-	mov r6, #0
-	strb r6, [r8, #1]		; state
+	tst r0, #0xf		; movement key, set state to move
+	movne r6, #2
+	tst r0, #0xf0		; attack key, set state to attack
+	movne r6, #3
+
+
+	adr r8, =player_animdata
+	cmp r6, #0
+	movne r7, #7		; reset animation
+	strbne r6, [r8, #1]	; state
+	strbne r7, [r8, #3]	; frame
 	b state_done
+
 ;;;;;;;;;;;;;;;;;;;;; MOVEMENT ;;;;;;;;;;;;;;;;;;;;; 
 state_movement
-	mov r6, #2
-	strb r6, [r8, #1]		; state
+	adr r8, =player_animdata
+	cmp r0, #0			; no input, set state to idle
+	moveq r6, #0
+	tst r0, #0xf0		; attack key, set state to attack
+	movne r6, #3
+
+	cmp r6, #2			; state changed, exit early
+	strbne r6, [r8, #1]
+	bne state_done
+
 ;set facing
 	tst r0, #1		; KEY_UP
 	movne r7, #0
@@ -293,13 +350,15 @@ state_attack
 ;r1: sprite x, attack minx
 ;r2: sprite y, attack miny
 ;r3: facing
-;r6: frame/state
+;r7: frame
 ;r12: address
 
-	cmp r6, #4				; r6 holds frame value
-	mov r6, #3
-	strb r6, [r8, #1]		; state
-	bne state_done			; r6 frame != 4, no attack handling this frame
+	adr r12, =player_animdata
+	cmp r7, #0				; r7 holds frame value
+	moveq r3, #0
+	strbeq r3, [r12, #1]		; frame == 0, set idle
+	beq state_done
+
 
 	adr r12, =player_ofs
 	mov r0, #3
@@ -317,18 +376,21 @@ state_attack
 	subeq r2, r2, #10		; attack ofs y
 	cmp r3, #2				; DOWN
 	addeq r1, r1, #0
-	addeq r2, r2, #54
+	addeq r2, r2, #60
 	cmp r3, #1				; LEFT
 	subeq r1, r1, #42
 	addeq r2, r2, #10
 	cmp r3, #3				; RIGHT
 	addeq r1, r1, #44
 	addeq r2, r2, #10
-swi swi_printreg
-
+; draw attack
 	swi swi_drawsprite_fg
+; do attack handling on frame 4
+	cmp r7, #4				; r7 holds frame value
+	bne state_done			; r7 frame != 4, no attack handling this frame
 
 	b state_done
+
 state_done
 	mov pc, lr
 
@@ -387,6 +449,56 @@ DRAW_PLAYER
 	swi swi_drawsprite_fg
 	mov pc, lr
 
+MOB_TICK
+;r0: sprite nr
+;r1: posx
+;r2: posy
+;r3: mob it
+;r5: mob cnt
+;r7: frame
+;r8: address
+;r10: address
+;r11: ofsx
+;r12: ofsy
+	adr r10, =player_ofs
+	ldr r7, [r10], #4		; ofsx
+	ldr r8, [r10], #4		; ofsy
+
+	adr r10, =player_pos
+	ldr r11, [r10], #4		; posx
+	ldr r12, [r10], #4		; posy
+
+	sub r11, r7, r11
+	sub r12, r8, r12
+
+	adr r5, =mob_cnt
+	ldr r5, [r5]			; mob_cnt
+	adr r10, =mob_arr
+	sub r10, r10, #4
+	mov r3, #0
+tick_mob_loop
+	add r10, r10, #16
+	ldrb r6, [r10, #0]		; hp
+	cmp r6, #0
+	moveq r6, #1
+	strbeq r6, [r10, #5]		;4+1: state
+
+	add r10, r10, #4
+	ldrb r6, [r10, #0]		; flags
+	ldrb r7, [r10, #1]		; state
+	ldrb r8, [r10, #2]		; facing
+	ldrb r9, [r10, #3]		; frame
+
+	subs r9, r9, #1
+	movmi r9, #7			; loop anim back
+	strb r9, [r10, #3]
+
+swi swi_printreg
+	add r3, r3, #1
+	cmp r3, r5
+	blt tick_mob_loop
+	mov pc, lr
+
 DRAW_MOBS
 ;r0: sprite nr
 ;r1: posx
@@ -420,6 +532,17 @@ draw_mob_loop
 	ldr r2, [r8], #4		; posy
 	add r8, r8, #4			; flags
 
+	ldrb r9, [r8, #0]		; flags
+	ldrb r10, [r8, #1]		; state
+	ldrb r11, [r8, #2]		; facing
+	ldrb r12, [r8, #3]		; frame
+	add r8, r8, #4			; next mob
+
+	add r10, r11, r10 lsl #2	; state*4 + facing
+	orr r0, r0, r10 lsl #16	; Y-frame in 2nd byte
+	orr r0, r0, r12 lsl #8
+;swi swi_printreg
+
 	add r1, r1, r6			; apply ofs
 	add r2, r2, r7
 
@@ -430,12 +553,12 @@ draw_mob_loop
 	blt draw_mob_loop
 	mov pc, lr
 
-
 _start
 	adr sp, =stack
 	swi swi_initraylib
 RUNRAYLIB
 	bl PLAYER_TICK
+	bl MOB_TICK
 	bl DRAW_MOBS
 	bl DRAW_PLAYER
 	bl DRAW_MAP
@@ -446,6 +569,5 @@ RUNRAYLIB
 
 DONE
 	END
-
 
 stack			fill 10

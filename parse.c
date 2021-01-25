@@ -107,8 +107,10 @@ int check_err(op_instr instr, char *str, unsigned int val, int type)
 			case ERR_ARG_ARGS:
 				printf("Line %i: %s\n", instr.linenr, instr.line);
 				printf("Invalid arguments\n");
+				err = 1;
 				break;
 	}
+	PARSE_ERR |= err;
 	return err;
 }
 void print_intermediate()
@@ -387,15 +389,29 @@ op_instr parse_dcd(op_instr in, char *string)
 	char *pch = strtok(string," \t\n");
 	while(pch != NULL)
 	{
-		if(pch[strlen(pch)-1] == ',')
-			pch[strlen(pch)-1] = '\0';
+		if(pch[0] == '=')
+		{
+// LBL
+			strcpy(in.arg[0], pch+1);
+			in.argtype[0] = ARG_LBL;
+			in.argcnt = 1;
 
-		strcpy(in.arg[0], pch);
-		in.argtype[0] = ARG_LIT;
-		in.argcnt = 1;
+			INTERMEDIATE[INTERMEDIATE_CNT] = in;
+			INTERMEDIATE_CNT++;
+		}
+		else
+		{
+// IMM
+			if(pch[strlen(pch)-1] == ',')
+				pch[strlen(pch)-1] = '\0';
 
-		INTERMEDIATE[INTERMEDIATE_CNT] = in;
-		INTERMEDIATE_CNT++;
+			strcpy(in.arg[0], pch);
+			in.argtype[0] = ARG_LIT;
+			in.argcnt = 1;
+
+			INTERMEDIATE[INTERMEDIATE_CNT] = in;
+			INTERMEDIATE_CNT++;
+		}
 		pch = strtok(NULL," \t\n");
 	}
 	return in;
@@ -1299,6 +1315,7 @@ unsigned int parse_inter_dcd(op_instr in)
 	}
 	else if(in.argtype[0] == ARG_LBL)
 	{
+
 		out = lbl2adr(in.arg[0]);
 	}
 	else

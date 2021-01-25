@@ -27,6 +27,7 @@ void raylib_init_sprites()
 	SPRITES[3] = LoadTexture("prog/sprite/stone.png");
 	SPRITES[4] = LoadTexture("prog/sprite/dirt.png");
 	SPRITES[5] = LoadTexture("prog/sprite/door.png");
-	SPRITES[6] = LoadTexture("prog/sprite/kobolt.png");
+//	SPRITES[6] = LoadTexture("prog/sprite/kobolt.png");
+	SPRITES[6] = LoadTexture("prog/sprite/mobsprites.png");
 	SPRITES[7] = LoadTexture("prog/sprite/playersprites.png");
 }

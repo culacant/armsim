@@ -1,3 +1,5 @@
+int PARSE_ERR = 0;
+
 enum ARG_TYPE
 {
 	ARG_REG			= 0,
